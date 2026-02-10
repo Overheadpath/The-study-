@@ -1,52 +1,196 @@
-import { useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import axios from "axios";
+import { Toaster } from "@/components/ui/sonner";
+
+// Pages
+import PinEntry from "@/pages/PinEntry";
+import StudentDashboard from "@/pages/StudentDashboard";
+import ParentDashboard from "@/pages/ParentDashboard";
+import AITutor from "@/pages/AITutor";
+import SubmitTask from "@/pages/SubmitTask";
+import RewardShop from "@/pages/RewardShop";
+import TaskApproval from "@/pages/TaskApproval";
+import ManageRewards from "@/pages/ManageRewards";
+import ManageKids from "@/pages/ManageKids";
+import PointsHistory from "@/pages/PointsHistory";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+export const API = `${BACKEND_URL}/api`;
 
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
+// Create axios instance
+export const api = axios.create({
+  baseURL: API,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+// Auth context
+export const useAuth = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [mode, setMode] = useState(null); // 'parent' or 'student'
+  const [currentKid, setCurrentKid] = useState(null);
 
   useEffect(() => {
-    helloWorldApi();
+    const savedAuth = localStorage.getItem("studyhelper_auth");
+    if (savedAuth) {
+      const auth = JSON.parse(savedAuth);
+      setIsAuthenticated(true);
+      setMode(auth.mode);
+      setCurrentKid(auth.kid);
+    }
   }, []);
 
-  return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
+  const login = useCallback((authMode, kid = null) => {
+    setIsAuthenticated(true);
+    setMode(authMode);
+    setCurrentKid(kid);
+    localStorage.setItem("studyhelper_auth", JSON.stringify({ mode: authMode, kid }));
+  }, []);
+
+  const logout = useCallback(() => {
+    setIsAuthenticated(false);
+    setMode(null);
+    setCurrentKid(null);
+    localStorage.removeItem("studyhelper_auth");
+  }, []);
+
+  const refreshKid = useCallback(async () => {
+    if (currentKid?.id) {
+      try {
+        const response = await api.get(`/kids/${currentKid.id}`);
+        const updatedKid = { id: response.data.id, name: response.data.name, points: response.data.points };
+        setCurrentKid(updatedKid);
+        localStorage.setItem("studyhelper_auth", JSON.stringify({ mode, kid: updatedKid }));
+      } catch (error) {
+        console.error("Failed to refresh kid data:", error);
+      }
+    }
+  }, [currentKid?.id, mode]);
+
+  return { isAuthenticated, mode, currentKid, login, logout, refreshKid };
 };
 
 function App() {
+  const auth = useAuth();
+
   return (
-    <div className="App">
+    <div className="min-h-screen bg-[#FDFBF7]">
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
+          {/* Public route - PIN entry */}
+          <Route 
+            path="/" 
+            element={
+              auth.isAuthenticated ? (
+                <Navigate to={auth.mode === "parent" ? "/parent" : "/student"} replace />
+              ) : (
+                <PinEntry onLogin={auth.login} />
+              )
+            } 
+          />
+
+          {/* Student routes */}
+          <Route 
+            path="/student" 
+            element={
+              auth.isAuthenticated && auth.mode === "student" ? (
+                <StudentDashboard auth={auth} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } 
+          />
+          <Route 
+            path="/student/tutor" 
+            element={
+              auth.isAuthenticated && auth.mode === "student" ? (
+                <AITutor auth={auth} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } 
+          />
+          <Route 
+            path="/student/submit" 
+            element={
+              auth.isAuthenticated && auth.mode === "student" ? (
+                <SubmitTask auth={auth} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } 
+          />
+          <Route 
+            path="/student/rewards" 
+            element={
+              auth.isAuthenticated && auth.mode === "student" ? (
+                <RewardShop auth={auth} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } 
+          />
+          <Route 
+            path="/student/history" 
+            element={
+              auth.isAuthenticated && auth.mode === "student" ? (
+                <PointsHistory auth={auth} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } 
+          />
+
+          {/* Parent routes */}
+          <Route 
+            path="/parent" 
+            element={
+              auth.isAuthenticated && auth.mode === "parent" ? (
+                <ParentDashboard auth={auth} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } 
+          />
+          <Route 
+            path="/parent/approve" 
+            element={
+              auth.isAuthenticated && auth.mode === "parent" ? (
+                <TaskApproval auth={auth} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } 
+          />
+          <Route 
+            path="/parent/rewards" 
+            element={
+              auth.isAuthenticated && auth.mode === "parent" ? (
+                <ManageRewards auth={auth} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } 
+          />
+          <Route 
+            path="/parent/kids" 
+            element={
+              auth.isAuthenticated && auth.mode === "parent" ? (
+                <ManageKids auth={auth} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } 
+          />
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      <Toaster position="top-center" richColors />
     </div>
   );
 }
