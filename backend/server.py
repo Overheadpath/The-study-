@@ -55,6 +55,7 @@ class KidUpdate(BaseModel):
     grade: Optional[int] = None
     pin: Optional[str] = None
     avatar_color: Optional[str] = None
+    points: Optional[int] = None
 
 class Task(BaseModel):
     model_config = ConfigDict(extra="ignore")
