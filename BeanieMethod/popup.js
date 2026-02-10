@@ -13,6 +13,11 @@ let currentUserId = null;
 let friendsList = [];
 let favorites = new Set();
 let csrfToken = null;
+let allBrainrots = [];
+let ownedBrainrots = [];
+let uniquePlayers = new Set();
+let autoRefreshTimer = null;
+let mutualsData = new Map();
 
 // =====================
 // STORAGE SAFE WRAPPER
