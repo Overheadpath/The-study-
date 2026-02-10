@@ -24,10 +24,12 @@
     </div>
 
     <div class="tabs">
-      <button id="tabServers" class="tab active">Scanner</button>
-      <button id="tabFriends" class="tab">Friends</button>
+      <button id="tabServers" class="tab active" data-testid="tab-servers">Scanner</button>
+      <button id="tabBrainrots" class="tab" data-testid="tab-brainrots">Brainrots</button>
+      <button id="tabFriends" class="tab" data-testid="tab-friends">Friends</button>
     </div>
 
+    <!-- SCANNER TAB -->
     <div id="viewServers" class="tab-content active">
       <div class="stats">
         <div>Total servers: <b id="totalServers">—</b></div>
@@ -53,30 +55,69 @@
           <input type="checkbox" id="useDeeplink" />
           <span>Use deeplink (faster join)</span>
         </label>
+        <label class="checkrow">
+          <input type="checkbox" id="autoRefresh" />
+          <span>Auto-refresh (every 3 min)</span>
+        </label>
       </div>
 
       <div class="buttons">
-        <button id="firstPage">First Page</button>
-        <button id="refreshCurrent">Refresh Page</button>
-        <button id="next">Next Page</button>
-        <button id="scanTotalsAgain">Rescan Stats</button>
+        <button id="firstPage" data-testid="first-page-btn">First Page</button>
+        <button id="refreshCurrent" data-testid="refresh-page-btn">Refresh Page</button>
+        <button id="next" data-testid="next-page-btn">Next Page</button>
+        <button id="scanTotalsAgain" data-testid="rescan-btn">Rescan Stats</button>
       </div>
 
       <div id="status" class="status">Idle</div>
       <div id="servers" class="servers"></div>
     </div>
 
+    <!-- BRAINROTS TAB -->
+    <div id="viewBrainrots" class="tab-content">
+      <div class="stats">
+        <div>Total Brainrots: <b id="totalBrainrots">—</b></div>
+        <div>Owned: <b id="ownedBrainrots" style="color: #7dffb3;">—</b></div>
+        <div>Missing: <b id="missingBrainrots" style="color: #ff6b6b;">—</b></div>
+        <div>Completion: <b id="completionRate">—%</b></div>
+      </div>
+
+      <div class="controls">
+        <label class="checkrow">
+          <input type="checkbox" id="notifyMissing" checked />
+          <span>Notify when missing Brainrots detected</span>
+        </label>
+        <label class="checkrow">
+          <input type="checkbox" id="showOwnedOnly" />
+          <span>Show only owned Brainrots</span>
+        </label>
+      </div>
+
+      <div class="buttons">
+        <button id="refreshBrainrots" data-testid="refresh-brainrots-btn">Refresh Brainrots</button>
+        <button id="clearBrainrotCache" data-testid="clear-cache-btn">Clear Cache</button>
+      </div>
+
+      <div id="brainrotStatus" class="status">Click Refresh to load...</div>
+      <div id="brainrotsList" class="servers"></div>
+    </div>
+
+    <!-- FRIENDS TAB -->
     <div id="viewFriends" class="tab-content">
       <div class="stats">
         <div>Total Friends: <b id="friendCount">—</b></div>
         <div>Selected: <b id="selectedCount">0</b></div>
+        <div>Unique Players Found: <b id="uniquePlayersCount">0</b></div>
       </div>
       
       <div class="controls">
-        <input type="text" id="friendSearch" placeholder="Search friends..." />
+        <input type="text" id="friendSearch" placeholder="Search friends..." data-testid="friend-search" />
         <div class="friend-actions">
-          <button id="selectAllFriends">Select All (Safe)</button>
-          <button id="removeSelected" class="btn-danger">Remove Selected</button>
+          <button id="selectAllFriends" data-testid="select-all-btn">Select All (Safe)</button>
+          <button id="removeSelected" class="btn-danger" data-testid="remove-selected-btn">Remove Selected</button>
+        </div>
+        <div class="friend-actions">
+          <button id="sendBulkRequests" class="btn-success" data-testid="send-bulk-requests-btn">Send Requests to Players</button>
+          <button id="scanMutuals" data-testid="scan-mutuals-btn">Scan Mutuals</button>
         </div>
       </div>
 
