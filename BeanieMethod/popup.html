@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="libs/toastify.min.css" />
+  <link rel="stylesheet" href="libs/animate.min.css" />
+</head>
+<body>
+
+  <div id="loadingOverlay" class="loading hidden">
+    <div class="loading-box animate__animated animate__fadeIn">
+      <div class="spinner"></div>
+      <div id="loadingText" class="loading-title">Scanning...</div>
+      <div id="liveCount" class="loading-sub">0 scanned</div>
+      <button id="skipScan" class="loading-skip">Skip</button>
+    </div>
+  </div>
+
+  <div class="panel animate__animated animate__fadeIn">
+    <div class="header-container" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+      <div class="header" style="margin-bottom: 0;"><span>Beanie</span> Pro</div>
+      <button id="toggleMusic" class="tab" style="flex: none; width: auto; padding: 4px 10px; font-size: 11px;">🎵 Music: OFF</button>
+    </div>
+
+    <div class="tabs">
+      <button id="tabServers" class="tab active">Scanner</button>
+      <button id="tabFriends" class="tab">Friends</button>
+    </div>
+
+    <div id="viewServers" class="tab-content active">
+      <div class="stats">
+        <div>Total servers: <b id="totalServers">—</b></div>
+        <div>Servers with players: <b id="serversWithPlayers">—</b></div>
+        <div>Servers with players (no owner inside): <b id="serversWithPlayersNoOwner">—</b></div>
+        <div id="pageInfo">Page 1 / —</div>
+      </div>
+      <div class="stats-separator"></div>
+      <div class="controls">
+        <label class="checkrow">
+          <input type="checkbox" id="skipTotals" />
+          <span>Skip totals scan</span>
+        </label>
+        <label class="checkrow">
+          <input type="checkbox" id="showOwnerInside" />
+          <span>Show servers with owner inside</span>
+        </label>
+        <label class="checkrow">
+          <input type="checkbox" id="onlyOnePlayer" />
+          <span>Only show servers with 1 player</span>
+        </label>
+        <label class="checkrow">
+          <input type="checkbox" id="useDeeplink" />
+          <span>Use deeplink (faster join)</span>
+        </label>
+      </div>
+
+      <div class="buttons">
+        <button id="firstPage">First Page</button>
+        <button id="refreshCurrent">Refresh Page</button>
+        <button id="next">Next Page</button>
+        <button id="scanTotalsAgain">Rescan Stats</button>
+      </div>
+
+      <div id="status" class="status">Idle</div>
+      <div id="servers" class="servers"></div>
+    </div>
+
+    <div id="viewFriends" class="tab-content">
+      <div class="stats">
+        <div>Total Friends: <b id="friendCount">—</b></div>
+        <div>Selected: <b id="selectedCount">0</b></div>
+      </div>
+      
+      <div class="controls">
+        <input type="text" id="friendSearch" placeholder="Search friends..." />
+        <div class="friend-actions">
+          <button id="selectAllFriends">Select All (Safe)</button>
+          <button id="removeSelected" class="btn-danger">Remove Selected</button>
+        </div>
+      </div>
+
+      <div id="bulkActionModal" class="modal hidden">
+        <div class="modal-content animate__animated animate__fadeInDown">
+          <h3>No Friends Selected</h3>
+          <p>Choose an action for your entire friend list:</p>
+          
+          <div class="modal-buttons">
+            <button id="removeAllNoAccess" class="btn-danger">Remove All Without Access</button>
+            <button id="removeAllWithAccess" class="btn-danger">Remove All With Access</button>
+            <button id="closeModal" class="btn-secondary">Exit / Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="friendStatus" class="status">Loading...</div>
+      <div id="friendsList" class="servers"></div>
+    </div>
+
+  </div>
+
+  <audio id="bgMusic" loop>
+    <source src="audio.mp3" type="audio/mpeg">
+  </audio>
+
+  <script src="libs/toastify.min.js"></script>
+  <script src="libs/howler.min.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
