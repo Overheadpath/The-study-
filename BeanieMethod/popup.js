@@ -171,6 +171,7 @@ const removeSelectedBtn = document.getElementById("removeSelected");
 // TABS & NAVIGATION
 // =====================
 tabServers.onclick = () => switchTab("servers");
+tabBrainrots.onclick = () => switchTab("brainrots");
 tabFriends.onclick = () => switchTab("friends");
 
 function switchTab(tabName) {
