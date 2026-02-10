@@ -629,6 +629,10 @@ async function renderFriends(list) {
     ? `<span class="access-badge">Has Access</span>` 
     : `<span class="access-badge no-access">No Access</span>`;
 
+  const mutualBadge = mutualsData.has(f.id) 
+    ? `<span class="mutual-badge">${mutualsData.get(f.id)} Mutuals</span>`
+    : '';
+
   const headshotUrl = await getHeadshot(f); // ✅ now valid
 
   card.innerHTML = `
@@ -638,7 +642,7 @@ async function renderFriends(list) {
     <img src="${headshotUrl}" class="friend-avatar" alt="profile">
     <div class="friend-info">
       <div class="friend-name">${displayName}</div>
-      <div class="friend-meta">${accessTag}</div>
+      <div class="friend-meta">${accessTag}${mutualBadge}</div>
     </div>
     <div class="actions">
       <button class="star-btn ${isFav ? "active" : ""}">★</button>
