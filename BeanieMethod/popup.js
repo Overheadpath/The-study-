@@ -671,6 +671,188 @@ function updateSelectedCount() {
     document.querySelectorAll(".friend-check:checked").length;
 }
 
+// =====================
+// BULK FRIEND REQUESTS
+// =====================
+async function collectUniquePlayers() {
+  uniquePlayers.clear();
+  
+  // Get all unique player IDs from scanned servers
+  const url = `https://games.roblox.com/v1/games/${PLACE_ID}/private-servers?limit=${LIMIT}&sortOrder=Desc`;
+  
+  try {
+    let cursor = "";
+    let scanned = 0;
+    
+    friendStatusEl.textContent = "Scanning servers for players...";
+    
+    while (scanned < 500) { // Limit to prevent infinite loop
+      const res = await fetch(`${url}&cursor=${cursor}`, { credentials: "include" });
+      if (!res.ok) break;
+      
+      const json = await res.json();
+      const servers = json.data || [];
+      
+      for (const server of servers) {
+        if (server.players && Array.isArray(server.players)) {
+          server.players.forEach(p => {
+            if (p.id && p.id !== currentUserId) {
+              uniquePlayers.add(Number(p.id));
+            }
+          });
+        }
+      }
+      
+      scanned += servers.length;
+      
+      if (!json.nextPageCursor) break;
+      cursor = json.nextPageCursor;
+    }
+    
+    uniquePlayersCountEl.textContent = uniquePlayers.size;
+    friendStatusEl.textContent = `Found ${uniquePlayers.size} unique players across servers.`;
+    return Array.from(uniquePlayers);
+    
+  } catch (e) {
+    friendStatusEl.textContent = "Failed to scan servers for players.";
+    return [];
+  }
+}
+
+async function sendBulkFriendRequests() {
+  playClick();
+  
+  if (!currentUserId) await getAuthenticatedUser();
+  if (!currentUserId) {
+    notify("Please log in to Roblox first", "error");
+    return;
+  }
+  
+  if (!csrfToken) await getCsrfToken();
+  
+  // Collect unique players
+  setButtonsDisabled(true);
+  const players = await collectUniquePlayers();
+  
+  if (players.length === 0) {
+    notify("No players found in scanned servers", "warn");
+    setButtonsDisabled(false);
+    return;
+  }
+  
+  const confirmed = confirm(`Send friend requests to ${players.length} unique players found in servers?`);
+  if (!confirmed) {
+    setButtonsDisabled(false);
+    return;
+  }
+  
+  friendStatusEl.textContent = "Sending friend requests...";
+  let sent = 0;
+  let failed = 0;
+  
+  // Filter out existing friends
+  const friendIds = new Set(friendsList.map(f => f.id));
+  const toSend = players.filter(id => !friendIds.has(id));
+  
+  for (const playerId of toSend) {
+    try {
+      const res = await fetch(`https://friends.roblox.com/v1/users/${playerId}/request-friendship`, {
+        method: "POST",
+        headers: { 
+          "X-CSRF-TOKEN": csrfToken,
+          "Content-Type": "application/json"
+        },
+        credentials: "include"
+      });
+      
+      if (res.ok) {
+        sent++;
+      } else if (res.status === 403) {
+        await getCsrfToken();
+        failed++;
+      } else {
+        failed++;
+      }
+      
+      // Rate limiting
+      if (sent % 10 === 0) {
+        await new Promise(r => setTimeout(r, 1000));
+      }
+      
+    } catch (e) {
+      failed++;
+    }
+  }
+  
+  friendStatusEl.textContent = `Sent ${sent} requests, ${failed} failed.`;
+  notify(`Friend requests sent: ${sent} successful`, "success");
+  setButtonsDisabled(false);
+  playDone();
+}
+
+// =====================
+// MUTUALS SCANNING
+// =====================
+async function scanMutuals() {
+  playClick();
+  
+  if (!currentUserId) await getAuthenticatedUser();
+  if (!currentUserId || friendsList.length === 0) {
+    notify("Load friends first", "warn");
+    return;
+  }
+  
+  setButtonsDisabled(true);
+  friendStatusEl.textContent = "Scanning mutuals... This may take a while.";
+  mutualsData.clear();
+  
+  // Get my friends' IDs
+  const myFriendIds = new Set(friendsList.map(f => f.id));
+  let scanned = 0;
+  
+  for (const friend of friendsList) {
+    try {
+      // Fetch friend's friends
+      const res = await fetch(`https://friends.roblox.com/v1/users/${friend.id}/friends`, {
+        credentials: "include"
+      });
+      
+      if (!res.ok) continue;
+      
+      const json = await res.json();
+      const theirFriends = json.data || [];
+      
+      // Count mutuals
+      const mutualCount = theirFriends.filter(f => myFriendIds.has(f.id)).length;
+      if (mutualCount > 0) {
+        mutualsData.set(friend.id, mutualCount);
+      }
+      
+      scanned++;
+      
+      if (scanned % 10 === 0) {
+        friendStatusEl.textContent = `Scanning mutuals... ${scanned}/${friendsList.length}`;
+        await new Promise(r => setTimeout(r, 500)); // Rate limiting
+      }
+      
+    } catch (e) {
+      console.error(`Failed to scan mutuals for ${friend.id}`, e);
+    }
+  }
+  
+  friendStatusEl.textContent = `Mutual scan complete. Found data for ${mutualsData.size} friends.`;
+  notify("Mutual friends scan complete", "success");
+  
+  // Re-render to show mutuals
+  renderFriends(friendsList);
+  setButtonsDisabled(false);
+  playDone();
+}
+
+// Bulk request button
+sendBulkRequestsBtn.onclick = sendBulkFriendRequests;
+scanMutualsBtn.onclick = scanMutuals;
+
 
 // =====================
 // ROBLOX SERVER LOGIC
