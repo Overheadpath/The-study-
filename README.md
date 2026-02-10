@@ -69,3 +69,14 @@ You should see JSON output containing:
 - Add authentication tokens/session management.
 - Add push notifications for parent approvals.
 - Add image upload storage (S3/Firebase/etc.).
+
+## Beanie Pro extension scaffold
+
+This repository now also includes an initial `extension/` scaffold for a Roblox quality-of-life browser extension named **Beanie Pro**. The current implementation focuses on phase-0 architecture only:
+
+- Manifest + background/content wiring
+- Persistent settings keys
+- Index service primitives (brainrot/friend/session)
+- Safety-first, non-invasive startup behavior
+
+See `docs/beanie-pro-upgrade-plan.md` for phased rollout details.

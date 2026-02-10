@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Beanie Pro",
+  "description": "Quality-of-life tooling for Steal a Brainrot on Roblox: indexing, tracking, and safe automation.",
+  "version": "0.1.0",
+  "permissions": [
+    "storage",
+    "notifications"
+  ],
+  "host_permissions": [
+    "https://www.roblox.com/*"
+  ],
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.roblox.com/games/*"],
+      "js": ["src/content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Beanie Pro"
+  }
+}
