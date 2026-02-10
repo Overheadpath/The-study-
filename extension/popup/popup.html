@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Beanie Pro</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Beanie Pro (Phase 0)</h1>
+      <p id="statusLine">Loading status…</p>
+
+      <section>
+        <label>
+          <input id="autoRefreshEnabled" type="checkbox" />
+          Auto-refresh session heartbeat
+        </label>
+      </section>
+
+      <section>
+        <label for="refreshIntervalSeconds">Refresh interval (sec)</label>
+        <input id="refreshIntervalSeconds" type="number" min="10" max="300" />
+      </section>
+
+      <section>
+        <label>
+          <input id="notifyOnMissingBrainrot" type="checkbox" />
+          Notify on missing Brainrot (prep)
+        </label>
+      </section>
+
+      <button id="saveBtn" type="button">Save settings</button>
+      <p id="result"></p>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

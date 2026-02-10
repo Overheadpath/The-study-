@@ -14,25 +14,39 @@ Beanie Pro is a quality-of-life extension for Steal a Brainrot on Roblox focused
 3. Keep automation opt-in, rate-limited, and user-cancelable.
 4. Default to dry-run previews for bulk operations.
 
-## Phase 0 (this commit): foundation
+## Phase 0 (implemented)
 
 - Manifest V3 scaffold (`extension/manifest.json`).
 - Background service worker with message handling for:
   - settings read/write,
-  - session snapshot upsert.
-- Content script heartbeat for non-invasive session snapshoting.
+  - settings sanitization and bounds checks,
+  - session snapshot upsert,
+  - runtime status query.
+- Content script heartbeat for non-invasive session snapshotting with configurable interval.
+- Popup UI for basic settings + status visibility.
 - Service modules for storage-backed indexes/settings:
   - brainrot index,
   - friend index,
   - session scan,
   - activity log.
 
+## How to use phase 0 now
+
+1. Open `chrome://extensions`.
+2. Enable **Developer mode**.
+3. Click **Load unpacked** and select the `extension/` folder.
+4. Open a Roblox game page (`https://www.roblox.com/games/*`).
+5. Click the Beanie Pro extension icon:
+   - view heartbeat status,
+   - configure auto-refresh,
+   - save settings.
+
 ## Phase 1: read-only intelligence
 
 - Detect visible Brainrots in-session.
 - Compare with owned index and notify on missing items.
 - Build friend index from relationship data with access-giver flags.
-- Add popup/dashboard for filter and search.
+- Expand popup/dashboard for filtering and search.
 
 ## Phase 2: controlled bulk actions
 

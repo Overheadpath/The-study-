@@ -21,6 +21,7 @@ const MESSAGE_TYPES = Object.freeze({
   GET_SETTINGS: 'GET_SETTINGS',
   UPDATE_SETTINGS: 'UPDATE_SETTINGS',
   GET_INDEXES: 'GET_INDEXES',
+  GET_STATUS: 'GET_STATUS',
 });
 
 module.exports = {
