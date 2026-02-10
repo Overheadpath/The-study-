@@ -447,3 +447,89 @@ button:disabled {
 
 .btn-secondary { background: #2a2f3d; color: white; }
 .btn-secondary:hover { background: #353b4d; }
+
+.btn-success {
+  background: #1e3a2b;
+  border-color: #2d5a43;
+  color: #7dffb3;
+}
+
+.btn-success:hover:not(:disabled) {
+  background: #2d5a43;
+}
+
+/* Brainrot Card */
+.brainrot-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #12151c;
+  border: 1px solid #1f2430;
+  border-radius: 8px;
+  padding: 8px;
+  transition: all 0.2s;
+}
+
+.brainrot-card.owned {
+  border-color: #2d5a43;
+  background: #1a2520;
+}
+
+.brainrot-card.missing {
+  border-color: #3a1e1e;
+  background: #1f1518;
+}
+
+.brainrot-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  background: #1f2430;
+  border: 1px solid #2a3244;
+  object-fit: cover;
+}
+
+.brainrot-info {
+  flex: 1;
+  overflow: hidden;
+}
+
+.brainrot-name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.brainrot-meta {
+  font-size: 11px;
+  color: #6a7485;
+  margin-top: 2px;
+}
+
+.status-badge {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.status-owned {
+  background: rgba(30, 58, 43, 0.5);
+  color: #7dffb3;
+}
+
+.status-missing {
+  background: rgba(58, 30, 30, 0.5);
+  color: #ff6b6b;
+}
+
+.mutual-badge {
+  background: rgba(0, 162, 255, 0.2);
+  color: #00a2ff;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 10px;
+  margin-left: 4px;
+}
