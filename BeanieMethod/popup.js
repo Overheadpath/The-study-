@@ -358,6 +358,199 @@ friendSearchInp.addEventListener("input", e => {
   renderFriends(filtered);
 });
 
+// =====================
+// BRAINROT DETECTION & TRACKING
+// =====================
+async function fetchAllGameBadges() {
+  try {
+    brainrotStatusEl.textContent = "Fetching game badges...";
+    const res = await fetch(`https://badges.roblox.com/v1/universes/${UNIVERSE_ID}/badges?limit=100&sortOrder=Asc`, {
+      credentials: "include"
+    });
+    
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    
+    const json = await res.json();
+    allBrainrots = json.data || [];
+    
+    await storage.set("allBrainrots", {
+      data: allBrainrots,
+      timestamp: Date.now()
+    });
+    
+    return allBrainrots;
+  } catch (e) {
+    brainrotStatusEl.textContent = `Error fetching badges: ${e.message}`;
+    notify("Failed to fetch game badges", "error");
+    return [];
+  }
+}
+
+async function fetchUserBadges(userId) {
+  try {
+    const owned = [];
+    let cursor = "";
+    
+    while (true) {
+      const url = `https://badges.roblox.com/v1/users/${userId}/badges?limit=100&sortOrder=Asc${cursor ? `&cursor=${cursor}` : ''}`;
+      const res = await fetch(url, { credentials: "include" });
+      
+      if (!res.ok) break;
+      
+      const json = await res.json();
+      const gameBadges = (json.data || []).filter(b => {
+        // Filter only badges from our game
+        return allBrainrots.some(gb => gb.id === b.id);
+      });
+      
+      owned.push(...gameBadges);
+      
+      if (!json.nextPageCursor) break;
+      cursor = json.nextPageCursor;
+    }
+    
+    return owned;
+  } catch (e) {
+    console.error("Error fetching user badges:", e);
+    return [];
+  }
+}
+
+async function loadBrainrotsFromCache() {
+  const cached = await storage.get("allBrainrots");
+  if (cached && cached.data && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
+    allBrainrots = cached.data;
+    return true;
+  }
+  return false;
+}
+
+async function refreshBrainrots() {
+  if (!currentUserId) await getAuthenticatedUser();
+  if (!currentUserId) {
+    brainrotStatusEl.textContent = "Please log in to Roblox first.";
+    return;
+  }
+  
+  setButtonsDisabled(true);
+  brainrotsListEl.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>';
+  
+  // Load from cache or fetch new
+  const cached = await loadBrainrotsFromCache();
+  if (!cached || allBrainrots.length === 0) {
+    await fetchAllGameBadges();
+  }
+  
+  if (allBrainrots.length === 0) {
+    brainrotStatusEl.textContent = "No badges found for this game.";
+    setButtonsDisabled(false);
+    return;
+  }
+  
+  brainrotStatusEl.textContent = "Checking your badges...";
+  ownedBrainrots = await fetchUserBadges(currentUserId);
+  
+  renderBrainrots();
+  updateBrainrotStats();
+  
+  const missing = allBrainrots.length - ownedBrainrots.length;
+  brainrotStatusEl.textContent = `Loaded ${allBrainrots.length} badges. You own ${ownedBrainrots.length}.`;
+  
+  // Send to background for notifications
+  if (notifyMissingCb.checked && missing > 0) {
+    chrome.runtime.sendMessage({
+      type: 'UPDATE_MISSING_BRAINROTS',
+      missing: allBrainrots.filter(b => !ownedBrainrots.some(o => o.id === b.id))
+    }).catch(() => {});
+    
+    notify(`You're missing ${missing} Brainrot${missing > 1 ? 's' : ''}!`, "warn");
+  }
+  
+  setButtonsDisabled(false);
+  playDone();
+}
+
+function renderBrainrots() {
+  brainrotsListEl.innerHTML = "";
+  
+  const ownedIds = new Set(ownedBrainrots.map(b => b.id));
+  const showOwned = showOwnedOnlyCb.checked;
+  
+  let displayed = 0;
+  
+  for (const brainrot of allBrainrots) {
+    const owned = ownedIds.has(brainrot.id);
+    
+    if (showOwned && !owned) continue;
+    
+    const card = document.createElement("div");
+    card.className = `brainrot-card ${owned ? 'owned' : 'missing'}`;
+    card.dataset.brainrotId = brainrot.id;
+    
+    const statusBadge = owned 
+      ? '<span class="status-badge status-owned">✓ Owned</span>'
+      : '<span class="status-badge status-missing">✗ Missing</span>';
+    
+    card.innerHTML = `
+      <img src="${brainrot.iconImageId ? `https://www.roblox.com/asset-thumbnail/image?assetId=${brainrot.iconImageId}&width=150&height=150` : 'icons/icon48.png'}" 
+           class="brainrot-icon" 
+           alt="${brainrot.name}" />
+      <div class="brainrot-info">
+        <div class="brainrot-name">${brainrot.name || 'Unknown Badge'}</div>
+        <div class="brainrot-meta">${statusBadge}</div>
+      </div>
+    `;
+    
+    brainrotsListEl.appendChild(card);
+    displayed++;
+  }
+  
+  if (displayed === 0) {
+    brainrotsListEl.innerHTML = '<div style="text-align:center;padding:20px;color:#666;">No badges to display.</div>';
+  }
+}
+
+function updateBrainrotStats() {
+  totalBrainrotsEl.textContent = allBrainrots.length;
+  ownedBrainrotsEl.textContent = ownedBrainrots.length;
+  missingBrainrotsEl.textContent = allBrainrots.length - ownedBrainrots.length;
+  
+  const completion = allBrainrots.length > 0 
+    ? Math.round((ownedBrainrots.length / allBrainrots.length) * 100)
+    : 0;
+  completionRateEl.textContent = completion;
+}
+
+// Brainrot event listeners
+refreshBrainrotsBtn.onclick = () => {
+  playClick();
+  refreshBrainrots();
+};
+
+clearBrainrotCacheBtn.onclick = async () => {
+  playClick();
+  await storage.set("allBrainrots", null);
+  allBrainrots = [];
+  ownedBrainrots = [];
+  brainrotsListEl.innerHTML = "";
+  totalBrainrotsEl.textContent = "—";
+  ownedBrainrotsEl.textContent = "—";
+  missingBrainrotsEl.textContent = "—";
+  completionRateEl.textContent = "—";
+  brainrotStatusEl.textContent = "Cache cleared. Click Refresh to reload.";
+  notify("Brainrot cache cleared", "success");
+};
+
+showOwnedOnlyCb.addEventListener("change", () => {
+  if (allBrainrots.length > 0) {
+    renderBrainrots();
+  }
+});
+
+notifyMissingCb.addEventListener("change", saveConfig);
+
 
 async function getHeadshot(f) {
   const apiUrl = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${f.id}&size=150x150&format=Png&isCircular=false`;
