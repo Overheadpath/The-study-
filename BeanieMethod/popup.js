@@ -217,6 +217,16 @@ onlyOnePlayerCb.addEventListener("change", () => {
   loadServers({ useCurrent: true });
 });
 skipTotalsCb.addEventListener("change", saveConfig);
+autoRefreshCb.addEventListener("change", () => {
+  saveConfig();
+  if (autoRefreshCb.checked) {
+    startAutoRefresh();
+    notify("Auto-refresh enabled (every 3 min)", "success");
+  } else {
+    stopAutoRefresh();
+    notify("Auto-refresh disabled", "info");
+  }
+});
 
 function saveConfig() {
   settingsStore.save({
