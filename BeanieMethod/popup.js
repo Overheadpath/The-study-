@@ -1326,12 +1326,20 @@ skipScanBtn.onclick = () => {
 (async () => {
   await loadLastJoined();
   await loadFavorites();
+  await getAuthenticatedUser();
   
   const savedSettings = await settingsStore.load();
   if (savedSettings.skipTotals !== undefined) skipTotalsCb.checked = savedSettings.skipTotals;
   if (savedSettings.showOwnerInside !== undefined) showOwnerInsideCb.checked = savedSettings.showOwnerInside;
   if (savedSettings.onlyOnePlayer !== undefined && onlyOnePlayerCb) onlyOnePlayerCb.checked = savedSettings.onlyOnePlayer;
   if (savedSettings.useDeeplink !== undefined) useDeeplinkCb.checked = savedSettings.useDeeplink;
+  if (savedSettings.autoRefresh !== undefined && autoRefreshCb) autoRefreshCb.checked = savedSettings.autoRefresh;
+  if (savedSettings.notifyMissing !== undefined && notifyMissingCb) notifyMissingCb.checked = savedSettings.notifyMissing;
+
+  // Start auto-refresh if enabled
+  if (autoRefreshCb.checked) {
+    startAutoRefresh();
+  }
 
   setInterval(() => {
     if (!lastJoinedServer) return;
@@ -1346,4 +1354,14 @@ skipScanBtn.onclick = () => {
 
   if (!skipTotalsCb.checked) await fetchTotals();
   await loadServers({ reset: true });
+  
+  // Listen for background messages
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.type === 'TRIGGER_BRAINROT_CHECK') {
+      if (currentUserId && notifyMissingCb.checked) {
+        refreshBrainrots();
+      }
+    }
+    return true;
+  });
 })();
