@@ -27,6 +27,10 @@ app = FastAPI()
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
+# Health check and root route
+@api_router.get("/")
+async def root():
+    return {"message": "Study Helper API", "status": "healthy"}
 
 # ============ MODELS ============
 
