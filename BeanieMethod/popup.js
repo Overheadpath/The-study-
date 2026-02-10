@@ -233,8 +233,30 @@ function saveConfig() {
     skipTotals: skipTotalsCb.checked,
     showOwnerInside: showOwnerInsideCb.checked,
     onlyOnePlayer: onlyOnePlayerCb?.checked,
-    useDeeplink: useDeeplinkCb.checked
+    useDeeplink: useDeeplinkCb.checked,
+    autoRefresh: autoRefreshCb?.checked,
+    notifyMissing: notifyMissingCb?.checked
   });
+}
+
+// =====================
+// AUTO-REFRESH FUNCTIONALITY
+// =====================
+function startAutoRefresh() {
+  stopAutoRefresh(); // Clear any existing timer
+  autoRefreshTimer = setInterval(() => {
+    if (viewServers.classList.contains("active")) {
+      notify("Auto-refreshing servers...", "info");
+      loadServers({ useCurrent: true });
+    }
+  }, AUTO_REFRESH_INTERVAL);
+}
+
+function stopAutoRefresh() {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
 }
 
 function setButtonsDisabled(v) {
