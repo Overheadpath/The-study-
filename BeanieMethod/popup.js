@@ -176,16 +176,23 @@ tabFriends.onclick = () => switchTab("friends");
 
 function switchTab(tabName) {
   playClick();
+  
+  // Remove all active classes
+  [tabServers, tabBrainrots, tabFriends].forEach(t => t.classList.remove("active"));
+  [viewServers, viewBrainrots, viewFriends].forEach(v => v.classList.remove("active"));
+  
   if (tabName === "servers") {
     tabServers.classList.add("active");
-    tabFriends.classList.remove("active");
     viewServers.classList.add("active");
-    viewFriends.classList.remove("active");
-  } else {
+  } else if (tabName === "brainrots") {
+    tabBrainrots.classList.add("active");
+    viewBrainrots.classList.add("active");
+    if (allBrainrots.length === 0) {
+      brainrotStatusEl.textContent = "Click 'Refresh Brainrots' to load badge data.";
+    }
+  } else if (tabName === "friends") {
     tabFriends.classList.add("active");
-    tabServers.classList.remove("active");
     viewFriends.classList.add("active");
-    viewServers.classList.remove("active");
     loadFriends();
   }
 }
