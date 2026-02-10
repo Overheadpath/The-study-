@@ -4,7 +4,9 @@
 const PLACE_ID = 109983668079237;
 const LIMIT = 100;
 const RATE_LIMIT_MS = 5000;
-const CACHE_TTL_MS = 10 * 60 * 1000; 
+const CACHE_TTL_MS = 10 * 60 * 1000;
+const UNIVERSE_ID = 4638540316; // Universe ID for badge fetching
+const AUTO_REFRESH_INTERVAL = 180000; // 3 minutes
 
 let lastJoinedServer = null;
 let currentUserId = null;
