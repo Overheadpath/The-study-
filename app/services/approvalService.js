@@ -4,7 +4,11 @@ const { getUser, isLinkedParent } = require('./authService');
 const { getTask, updateTaskStatus } = require('./taskService');
 const { authenticateParentWithOS } = require('./biometricAdapter');
 const { buildApprovalMessage } = require('./aiService');
-const { assertStudentCannotApprove, assertTaskNotAlreadyApproved } = require('./securityService');
+const {
+  assertStudentCannotApprove,
+  assertTaskNotAlreadyApproved,
+  assertTaskPendingApproval,
+} = require('./securityService');
 
 async function approveTask({ parentId, taskId, nativeBiometricAuth }) {
   assertStudentCannotApprove({ actorId: parentId });
@@ -18,6 +22,7 @@ async function approveTask({ parentId, taskId, nativeBiometricAuth }) {
   }
 
   assertTaskNotAlreadyApproved({ taskId });
+  assertTaskPendingApproval({ taskId });
 
   const biometricOk = await authenticateParentWithOS({
     promptMessage: 'Authenticate parent approval',
