@@ -299,8 +299,12 @@ class StudyHelperAPITester:
             self.log_test("Redeem Reward", False, "Missing reward or kid")
             return False
             
-        response = self.make_request('POST', f'rewards/{self.created_reward_id}/redeem', 
-                                   params={'kid_id': self.created_kid_id})
+        # Use the correct URL format with query parameter
+        url = f"{self.api_url}/rewards/{self.created_reward_id}/redeem?kid_id={self.created_kid_id}"
+        try:
+            response = requests.post(url, headers={'Content-Type': 'application/json'})
+        except Exception as e:
+            response = None
         
         success = response and response.status_code == 200
         if success:
