@@ -16,7 +16,15 @@ function assertTaskNotAlreadyApproved({ taskId }) {
   }
 }
 
+function assertTaskPendingApproval({ taskId }) {
+  const task = getTask(taskId);
+  if (task.status !== TaskStatus.PENDING_APPROVAL) {
+    throw new Error('Security rule: task must be pending approval before parent approval');
+  }
+}
+
 module.exports = {
   assertStudentCannotApprove,
   assertTaskNotAlreadyApproved,
+  assertTaskPendingApproval,
 };
