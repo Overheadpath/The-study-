@@ -505,6 +505,24 @@ Current subject focus{subject_text}."""
         logging.error(f"Chat error: {e}")
         raise HTTPException(status_code=500, detail="Failed to get AI response")
 
+# ============ IMAGE UPLOAD ============
+
+@api_router.post("/upload/image")
+async def upload_image(file: UploadFile = File(...)):
+    """Upload an image and return a data URL"""
+    try:
+        contents = await file.read()
+        base64_encoded = base64.b64encode(contents).decode('utf-8')
+        
+        # Determine mime type
+        content_type = file.content_type or 'image/jpeg'
+        data_url = f"data:{content_type};base64,{base64_encoded}"
+        
+        return {"image_url": data_url, "filename": file.filename}
+    except Exception as e:
+        logging.error(f"Upload error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to upload image")
+
 @api_router.get("/chat/history")
 async def get_chat_history(kid_id: str, limit: int = 50):
     """Get chat history for a kid"""
