@@ -2,11 +2,11 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { api } from "@/App";
 import { toast } from "sonner";
-import { BookOpen, Mail, Lock, ArrowRight } from "lucide-react";
+import { BookOpen, Mail, Lock, ArrowRight, User, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-const LoginPage = ({ onLogin }) => {
+const LoginPage = ({ onLogin, onKidLogin }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -28,9 +28,19 @@ const LoginPage = ({ onLogin }) => {
         password: form.password
       });
 
-      toast.success(`Welcome back, ${response.data.family_name}!`);
-      onLogin(response.data);
-      navigate("/family");
+      const data = response.data;
+      
+      if (data.user_type === "kid") {
+        // Kid login - go directly to student dashboard
+        toast.success(`Welcome back, ${data.kid.name}! 🎉`);
+        onKidLogin(data.kid);
+        navigate("/student");
+      } else {
+        // Parent login - go to family dashboard
+        toast.success(`Welcome back, ${data.family.family_name}!`);
+        onLogin(data.family);
+        navigate("/family");
+      }
     } catch (error) {
       console.error("Login failed:", error);
       toast.error("Invalid email or password");
@@ -51,7 +61,19 @@ const LoginPage = ({ onLogin }) => {
             <span className="font-bold text-2xl text-gray-800 font-heading">Study Helper</span>
           </Link>
           <h1 className="text-2xl font-bold text-gray-800 font-heading">Welcome Back</h1>
-          <p className="text-gray-500">Log in to your family account</p>
+          <p className="text-gray-500">Log in with your account</p>
+        </div>
+
+        {/* Info badges */}
+        <div className="flex justify-center gap-3 mb-6">
+          <div className="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-full text-sm text-indigo-600">
+            <Users className="w-4 h-4" />
+            <span>Parents</span>
+          </div>
+          <div className="flex items-center gap-2 bg-purple-50 px-3 py-1.5 rounded-full text-sm text-purple-600">
+            <User className="w-4 h-4" />
+            <span>Students</span>
+          </div>
         </div>
 
         {/* Form */}
@@ -65,7 +87,7 @@ const LoginPage = ({ onLogin }) => {
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  placeholder="parent@example.com"
+                  placeholder="your@email.com"
                   className="pl-10 h-12"
                   data-testid="email-input"
                 />
@@ -104,12 +126,17 @@ const LoginPage = ({ onLogin }) => {
             </Button>
           </form>
 
-          <p className="text-center text-sm text-gray-500 mt-6">
-            Don't have an account?{" "}
-            <Link to="/register" className="text-indigo-600 font-semibold hover:underline">
-              Sign Up Free
-            </Link>
-          </p>
+          <div className="mt-6 pt-6 border-t border-gray-100">
+            <p className="text-center text-sm text-gray-500">
+              Parents:{" "}
+              <Link to="/register" className="text-indigo-600 font-semibold hover:underline">
+                Create Family Account
+              </Link>
+            </p>
+            <p className="text-center text-xs text-gray-400 mt-2">
+              Students: Ask your parent to set up your login email
+            </p>
+          </div>
         </div>
       </div>
     </div>
