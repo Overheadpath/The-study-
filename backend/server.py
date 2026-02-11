@@ -483,6 +483,9 @@ async def get_family(family_id: str):
     if not family:
         raise HTTPException(status_code=404, detail="Family not found")
     
+    # Check if admin email
+    admin = is_admin_email(family.get("email", ""))
+    
     kids_count = await db.kids.count_documents({"family_id": family_id})
     
     return FamilyResponse(
@@ -490,8 +493,9 @@ async def get_family(family_id: str):
         email=family["email"],
         family_name=family.get("family_name", "My Family"),
         curriculum=family.get("curriculum", "caps"),
-        is_premium=family.get("is_premium", False),
-        premium_expires=family.get("premium_expires"),
+        is_premium=admin or family.get("is_premium", False),
+        is_admin=admin,
+        premium_expires=None if admin else family.get("premium_expires"),
         kids_count=kids_count
     )
 
