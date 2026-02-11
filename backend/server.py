@@ -409,7 +409,8 @@ async def register_family(data: FamilyRegister):
     family = Family(
         email=data.email.lower(),
         password_hash=hash_password(data.password),
-        family_name=data.family_name
+        family_name=data.family_name,
+        curriculum=data.curriculum
     )
     
     await db.families.insert_one(serialize_doc(family.model_dump()))
@@ -418,6 +419,7 @@ async def register_family(data: FamilyRegister):
         id=family.id,
         email=family.email,
         family_name=family.family_name,
+        curriculum=family.curriculum,
         is_premium=False,
         kids_count=0
     )
@@ -439,6 +441,7 @@ async def login_family(data: FamilyLogin):
         id=family["id"],
         email=family["email"],
         family_name=family.get("family_name", "My Family"),
+        curriculum=family.get("curriculum", "caps"),
         is_premium=family.get("is_premium", False),
         premium_expires=family.get("premium_expires"),
         kids_count=kids_count
@@ -457,6 +460,7 @@ async def get_family(family_id: str):
         id=family["id"],
         email=family["email"],
         family_name=family.get("family_name", "My Family"),
+        curriculum=family.get("curriculum", "caps"),
         is_premium=family.get("is_premium", False),
         premium_expires=family.get("premium_expires"),
         kids_count=kids_count
