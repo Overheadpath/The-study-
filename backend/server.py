@@ -59,6 +59,8 @@ class Kid(BaseModel):
     name: str
     grade: int
     pin: str
+    email: Optional[str] = None  # Kid's own email for direct login
+    password_hash: Optional[str] = None  # Kid's password for direct login
     points: int = 0
     avatar_color: str = "#4F46E5"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -68,11 +70,15 @@ class KidCreate(BaseModel):
     name: str
     grade: int
     pin: str
+    email: Optional[str] = None  # Optional email for kid's direct login
+    password: Optional[str] = None  # Optional password for kid's direct login
     avatar_color: Optional[str] = "#4F46E5"
 
 class KidUpdate(BaseModel):
     name: Optional[str] = None
     grade: Optional[int] = None
+    email: Optional[str] = None
+    password: Optional[str] = None
     pin: Optional[str] = None
     avatar_color: Optional[str] = None
     points: Optional[int] = None
