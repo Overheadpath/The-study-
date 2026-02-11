@@ -64,6 +64,7 @@ class Task(BaseModel):
     title: str
     description: str
     subject: str
+    image_url: Optional[str] = None  # Photo of completed homework
     status: str = "pending"  # pending, approved, rejected
     points_awarded: int = 0
     rating: int = 0  # 1-5 stars
@@ -76,6 +77,7 @@ class TaskCreate(BaseModel):
     title: str
     description: str
     subject: str
+    image_url: Optional[str] = None  # Photo of completed homework
 
 class TaskApproval(BaseModel):
     status: str  # approved or rejected
