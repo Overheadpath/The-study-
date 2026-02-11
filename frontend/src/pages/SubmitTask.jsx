@@ -323,6 +323,29 @@ const SubmitTask = ({ auth }) => {
             />
           </div>
 
+          {/* Estimated Points */}
+          {(estimatedPoints || estimating) && (
+            <div className="card-playful bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-indigo-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-indigo-800">Estimated Points</p>
+                  {estimating ? (
+                    <p className="text-xs text-indigo-600">Calculating...</p>
+                  ) : (
+                    <>
+                      <p className="text-2xl font-bold text-indigo-600 font-heading">~{estimatedPoints?.estimated_points} pts</p>
+                      <p className="text-xs text-indigo-500">{estimatedPoints?.reasoning}</p>
+                    </>
+                  )}
+                </div>
+              </div>
+              <p className="text-xs text-indigo-400 mt-2">*Final points decided by parent</p>
+            </div>
+          )}
+
           {/* Submit Button */}
           <Button
             type="submit"
