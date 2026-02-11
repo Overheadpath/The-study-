@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "@/App";
 import { toast } from "sonner";
 import { 
-  ArrowLeft, Users, Plus, Trash2, Edit2, UserPlus
+  ArrowLeft, Users, Trash2, Edit2, UserPlus, Mail, Lock, Eye, EyeOff
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,12 +46,15 @@ const ManageKids = ({ auth }) => {
   const [editingKid, setEditingKid] = useState(null);
   const [deletingKid, setDeletingKid] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
   const [form, setForm] = useState({
     name: "",
     grade: "4",
     pin: "",
-    avatar_color: AVATAR_COLORS[0]
+    avatar_color: AVATAR_COLORS[0],
+    email: "",
+    password: ""
   });
 
   useEffect(() => {
@@ -72,38 +75,58 @@ const ManageKids = ({ auth }) => {
 
   const handleSave = async () => {
     if (!form.name.trim() || !form.pin || form.pin.length !== 4) {
-      toast.error("Please fill in all fields with a 4-digit PIN");
+      toast.error("Please fill in name and a 4-digit PIN");
+      return;
+    }
+
+    // Validate email/password pair
+    if (form.email && !form.password && !editingKid?.email) {
+      toast.error("Please set a password for the email login");
       return;
     }
 
     setSaving(true);
     
     try {
+      const payload = {
+        name: form.name,
+        grade: parseInt(form.grade),
+        pin: form.pin,
+        avatar_color: form.avatar_color
+      };
+
+      // Add email if provided
+      if (form.email) {
+        payload.email = form.email;
+      }
+      
+      // Add password if provided
+      if (form.password) {
+        payload.password = form.password;
+      }
+
       if (editingKid) {
-        await api.put(`/kids/${editingKid.id}`, {
-          name: form.name,
-          grade: parseInt(form.grade),
-          pin: form.pin,
-          avatar_color: form.avatar_color
-        });
+        await api.put(`/kids/${editingKid.id}`, payload);
         toast.success("Kid updated!");
       } else {
-        await api.post("/kids", {
-          name: form.name,
-          grade: parseInt(form.grade),
-          pin: form.pin,
-          avatar_color: form.avatar_color
-        });
+        // Add family_id for new kids
+        const familyData = localStorage.getItem("studyhelper_family");
+        if (familyData) {
+          const family = JSON.parse(familyData);
+          payload.family_id = family.id;
+        }
+        await api.post("/kids", payload);
         toast.success("Kid added!");
       }
       
       setShowAddDialog(false);
       setEditingKid(null);
-      setForm({ name: "", grade: "4", pin: "", avatar_color: AVATAR_COLORS[0] });
+      setForm({ name: "", grade: "4", pin: "", avatar_color: AVATAR_COLORS[0], email: "", password: "" });
       fetchKids();
     } catch (error) {
       console.error("Failed to save:", error);
-      toast.error("Failed to save kid");
+      const message = error.response?.data?.detail || "Failed to save kid";
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -129,7 +152,9 @@ const ManageKids = ({ auth }) => {
       name: kid.name,
       grade: kid.grade.toString(),
       pin: kid.pin,
-      avatar_color: kid.avatar_color || AVATAR_COLORS[0]
+      avatar_color: kid.avatar_color || AVATAR_COLORS[0],
+      email: kid.email || "",
+      password: "" // Don't show existing password
     });
     setShowAddDialog(true);
   };
@@ -140,7 +165,9 @@ const ManageKids = ({ auth }) => {
       name: "", 
       grade: "4", 
       pin: "", 
-      avatar_color: AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)] 
+      avatar_color: AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)],
+      email: "",
+      password: ""
     });
     setShowAddDialog(true);
   };
@@ -211,11 +238,18 @@ const ManageKids = ({ auth }) => {
                   
                   <div className="flex-1">
                     <h3 className="font-bold text-gray-800 font-heading text-xl">{kid.name}</h3>
-                    <div className="flex items-center gap-4 mt-1">
+                    <div className="flex items-center gap-3 mt-1 flex-wrap">
                       <span className="text-sm text-gray-500">Grade {kid.grade}</span>
                       <span className="text-sm text-gray-400">PIN: {kid.pin}</span>
                       <span className="points-badge text-xs">{kid.points} pts</span>
                     </div>
+                    {kid.email && (
+                      <div className="flex items-center gap-1 mt-1 text-xs text-indigo-600">
+                        <Mail className="w-3 h-3" />
+                        <span>{kid.email}</span>
+                        <span className="bg-indigo-100 px-1.5 py-0.5 rounded text-indigo-700 ml-1">Can login directly</span>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="flex gap-2">
@@ -242,16 +276,16 @@ const ManageKids = ({ auth }) => {
 
         {/* Tips */}
         <div className="mt-8 card-playful bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-          <h4 className="font-bold text-blue-800 mb-2 font-heading">CAPS Grades Supported</h4>
+          <h4 className="font-bold text-blue-800 mb-2 font-heading">💡 Kid Email Login</h4>
           <p className="text-sm text-blue-700">
-            Grades 4-9 with appropriate subjects. The AI tutor adapts to each child's grade level!
+            You can set up an email and password for each kid so they can log in directly to their student dashboard - without accessing parent features!
           </p>
         </div>
       </main>
 
       {/* Add/Edit Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-heading text-xl flex items-center gap-2">
               <Users className="w-6 h-6 text-emerald-500" />
@@ -302,7 +336,7 @@ const ManageKids = ({ auth }) => {
                   <SelectValue placeholder="Select grade" />
                 </SelectTrigger>
                 <SelectContent>
-                  {[4, 5, 6, 7, 8, 9].map((grade) => (
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((grade) => (
                     <SelectItem key={grade} value={grade.toString()}>
                       Grade {grade}
                     </SelectItem>
@@ -326,8 +360,62 @@ const ManageKids = ({ auth }) => {
                 data-testid="kid-pin-input"
               />
               <p className="text-xs text-gray-400 mt-1">
-                This PIN is used by the child to log in
+                Used for quick PIN login on shared devices
               </p>
+            </div>
+
+            {/* Divider */}
+            <div className="relative py-2">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-gray-200" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-white px-2 text-gray-500">Optional: Direct Email Login</span>
+              </div>
+            </div>
+
+            {/* Email Login Section */}
+            <div className="bg-indigo-50 rounded-xl p-4 space-y-3">
+              <p className="text-xs text-indigo-700">
+                Set up an email and password so your child can log in directly to their student dashboard.
+              </p>
+              
+              <div>
+                <label className="text-sm font-semibold text-gray-700 mb-1 block">
+                  <Mail className="w-4 h-4 inline mr-1" />
+                  Kid's Email
+                </label>
+                <Input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  placeholder="child@example.com"
+                  data-testid="kid-email-input"
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm font-semibold text-gray-700 mb-1 block">
+                  <Lock className="w-4 h-4 inline mr-1" />
+                  {editingKid?.email ? "New Password (leave blank to keep current)" : "Password"}
+                </label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    placeholder={editingKid?.email ? "••••••••" : "Set a password"}
+                    data-testid="kid-password-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
           
