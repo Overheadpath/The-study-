@@ -15,6 +15,11 @@ import TaskApproval from "@/pages/TaskApproval";
 import ManageRewards from "@/pages/ManageRewards";
 import ManageKids from "@/pages/ManageKids";
 import PointsHistory from "@/pages/PointsHistory";
+import StudyTimer from "@/pages/StudyTimer";
+import TypingPractice from "@/pages/TypingPractice";
+import Leaderboard from "@/pages/Leaderboard";
+import Badges from "@/pages/Badges";
+import WeeklyChallenges from "@/pages/WeeklyChallenges";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
