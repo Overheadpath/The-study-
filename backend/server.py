@@ -232,6 +232,7 @@ class Family(BaseModel):
     password_hash: str
     family_name: str = "My Family"
     parent_pin: str = "1234"
+    curriculum: str = "caps"  # Default curriculum
     is_premium: bool = False
     premium_expires: Optional[str] = None
     ai_questions_today: int = 0
@@ -242,6 +243,7 @@ class FamilyRegister(BaseModel):
     email: str
     password: str
     family_name: str
+    curriculum: str = "caps"
 
 class FamilyLogin(BaseModel):
     email: str
