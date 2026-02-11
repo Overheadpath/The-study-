@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/App";
 import { toast } from "sonner";
-import { ArrowLeft, Send, BookOpen, CheckCircle } from "lucide-react";
+import { ArrowLeft, Send, BookOpen, CheckCircle, Camera, X, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,11 +20,15 @@ const SubmitTask = ({ auth }) => {
   const [kidData, setKidData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
   
   const [form, setForm] = useState({
     title: "",
     description: "",
-    subject: ""
+    subject: "",
+    image_url: ""
   });
 
   useEffect(() => {
@@ -45,6 +49,58 @@ const SubmitTask = ({ auth }) => {
     }
   };
 
+  const handleImageSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image too large. Max 5MB allowed.");
+      return;
+    }
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImagePreview(e.target.result);
+    };
+    reader.readAsDataURL(file);
+
+    // Upload to server
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await api.post('/upload/image', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      setForm({ ...form, image_url: response.data.image_url });
+      toast.success("Photo added!");
+    } catch (error) {
+      console.error("Failed to upload:", error);
+      toast.error("Failed to upload photo");
+      setImagePreview(null);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeImage = () => {
+    setImagePreview(null);
+    setForm({ ...form, image_url: "" });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -60,7 +116,8 @@ const SubmitTask = ({ auth }) => {
         kid_id: auth.currentKid.id,
         title: form.title,
         description: form.description,
-        subject: form.subject
+        subject: form.subject,
+        image_url: form.image_url || null
       });
 
       setSubmitted(true);
@@ -88,7 +145,8 @@ const SubmitTask = ({ auth }) => {
             <Button
               onClick={() => {
                 setSubmitted(false);
-                setForm({ title: "", description: "", subject: "" });
+                setForm({ title: "", description: "", subject: "", image_url: "" });
+                setImagePreview(null);
               }}
               className="w-full btn-primary"
               data-testid="submit-another-btn"
@@ -173,19 +231,71 @@ const SubmitTask = ({ auth }) => {
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               placeholder="Describe what you learned or did. The more detail, the more points you might earn!"
-              rows={5}
+              rows={4}
               className="resize-none"
               data-testid="task-description-input"
             />
-            <p className="text-xs text-gray-400">
-              Tip: Explain what you learned or how you solved problems to earn more points!
-            </p>
+          </div>
+
+          {/* Image Upload */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <Camera className="w-4 h-4" />
+              Add a Photo (optional)
+            </label>
+            
+            {imagePreview ? (
+              <div className="relative inline-block">
+                <img 
+                  src={imagePreview} 
+                  alt="Homework preview" 
+                  className="w-full max-w-xs rounded-xl border-2 border-gray-200"
+                />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/50 transition-colors"
+              >
+                {uploading ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-8 h-8 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                    <p className="text-sm text-gray-500">Uploading...</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
+                      <ImageIcon className="w-6 h-6 text-gray-400" />
+                    </div>
+                    <p className="text-sm text-gray-500">Tap to take or choose a photo</p>
+                    <p className="text-xs text-gray-400">Show your completed work!</p>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleImageSelect}
+              className="hidden"
+              data-testid="image-input"
+            />
           </div>
 
           {/* Submit Button */}
           <Button
             type="submit"
-            disabled={loading || !form.title || !form.description || !form.subject}
+            disabled={loading || uploading || !form.title || !form.description || !form.subject}
             className="w-full h-14 btn-primary text-lg"
             data-testid="submit-task-btn"
           >
@@ -214,11 +324,11 @@ const SubmitTask = ({ auth }) => {
             </li>
             <li className="flex items-start gap-2">
               <span className="text-amber-500">✓</span>
-              Mention any challenges you overcame
+              Add a photo of your work!
             </li>
             <li className="flex items-start gap-2">
               <span className="text-amber-500">✓</span>
-              Show effort and understanding
+              Mention any challenges you overcame
             </li>
           </ul>
         </div>
