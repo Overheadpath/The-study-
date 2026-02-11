@@ -240,6 +240,16 @@ function App() {
               )
             } 
           />
+          <Route 
+            path="/parent/challenges" 
+            element={
+              auth.isAuthenticated && auth.mode === "parent" ? (
+                <WeeklyChallenges auth={auth} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } 
+          />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
