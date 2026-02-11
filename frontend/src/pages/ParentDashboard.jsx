@@ -209,6 +209,21 @@ const ParentDashboard = ({ auth }) => {
             </div>
             <ChevronRight className="w-5 h-5 text-gray-400" />
           </button>
+
+          <button
+            data-testid="challenges-btn"
+            onClick={() => navigate("/parent/challenges")}
+            className="w-full card-playful flex items-center gap-4 hover:border-purple-300 animate-fade-in"
+          >
+            <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center flex-shrink-0">
+              <Target className="w-7 h-7 text-white" />
+            </div>
+            <div className="flex-1 text-left">
+              <h3 className="font-bold text-gray-800 font-heading">Weekly Challenges</h3>
+              <p className="text-sm text-gray-500">Create bonus challenges</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-gray-400" />
+          </button>
         </div>
       </main>
     </div>
