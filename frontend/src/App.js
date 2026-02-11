@@ -178,7 +178,7 @@ function App() {
           />
           <Route 
             path="/login" 
-            element={<LoginPage onLogin={auth.loginFamily} />} 
+            element={<LoginPage onLogin={auth.loginFamily} onKidLogin={auth.loginKid} />} 
           />
 
           {/* Family dashboard (after login) */}
