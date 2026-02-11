@@ -426,11 +426,15 @@ async def register_family(data: FamilyRegister):
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
+    # Check if admin email
+    admin = is_admin_email(data.email)
+    
     family = Family(
         email=data.email.lower(),
         password_hash=hash_password(data.password),
         family_name=data.family_name,
-        curriculum=data.curriculum
+        curriculum=data.curriculum,
+        is_premium=admin  # Admins get premium automatically
     )
     
     await db.families.insert_one(serialize_doc(family.model_dump()))
@@ -440,7 +444,8 @@ async def register_family(data: FamilyRegister):
         email=family.email,
         family_name=family.family_name,
         curriculum=family.curriculum,
-        is_premium=False,
+        is_premium=admin,
+        is_admin=admin,
         kids_count=0
     )
 
@@ -454,6 +459,9 @@ async def login_family(data: FamilyLogin):
     if not verify_password(data.password, family.get("password_hash", "")):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     
+    # Check if admin email
+    admin = is_admin_email(family.get("email", ""))
+    
     # Count kids
     kids_count = await db.kids.count_documents({"family_id": family["id"]})
     
@@ -462,8 +470,9 @@ async def login_family(data: FamilyLogin):
         email=family["email"],
         family_name=family.get("family_name", "My Family"),
         curriculum=family.get("curriculum", "caps"),
-        is_premium=family.get("is_premium", False),
-        premium_expires=family.get("premium_expires"),
+        is_premium=admin or family.get("is_premium", False),
+        is_admin=admin,
+        premium_expires=None if admin else family.get("premium_expires"),
         kids_count=kids_count
     )
 
