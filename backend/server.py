@@ -632,9 +632,12 @@ async def verify_pin(data: PinVerify):
 # ============ KIDS ROUTES ============
 
 @api_router.get("/kids", response_model=List[Kid])
-async def get_kids():
-    """Get all kids"""
-    kids = await db.kids.find({}, {"_id": 0}).to_list(100)
+async def get_kids(family_id: Optional[str] = None):
+    """Get all kids, optionally filtered by family"""
+    query = {}
+    if family_id:
+        query["family_id"] = family_id
+    kids = await db.kids.find(query, {"_id": 0}).to_list(100)
     return kids
 
 @api_router.get("/kids/{kid_id}", response_model=Kid)
@@ -648,6 +651,15 @@ async def get_kid(kid_id: str):
 @api_router.post("/kids", response_model=Kid)
 async def create_kid(data: KidCreate):
     """Create a new kid"""
+    # Check subscription limits if family_id provided
+    if data.family_id:
+        status = await get_family_subscription_status(data.family_id)
+        if not status.can_add_child:
+            raise HTTPException(
+                status_code=403, 
+                detail=f"Free plan allows only {status.max_children} child. Upgrade to Premium for unlimited children!"
+            )
+    
     kid = Kid(**data.model_dump())
     await db.kids.insert_one(serialize_doc(kid.model_dump()))
     return kid
