@@ -4,15 +4,19 @@ import { api } from "@/App";
 import { toast } from "sonner";
 import { 
   BookOpen, Gift, MessageCircle, PlusCircle, History, 
-  LogOut, Star, Trophy, Sparkles, ChevronRight 
+  LogOut, Star, Trophy, Sparkles, ChevronRight, Clock,
+  Keyboard, Award, Target, Flame, Users
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 const StudentDashboard = ({ auth }) => {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [kidData, setKidData] = useState(null);
+  const [streak, setStreak] = useState(null);
+  const [badges, setBadges] = useState([]);
+  const [challenges, setChallenges] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchData();
@@ -22,12 +26,18 @@ const StudentDashboard = ({ auth }) => {
     if (!auth.currentKid?.id) return;
     
     try {
-      const [statsRes, kidRes] = await Promise.all([
+      const [statsRes, kidRes, streakRes, badgesRes, challengesRes] = await Promise.all([
         api.get(`/stats/kid/${auth.currentKid.id}`),
-        api.get(`/kids/${auth.currentKid.id}`)
+        api.get(`/kids/${auth.currentKid.id}`),
+        api.get(`/streak/${auth.currentKid.id}`),
+        api.get(`/badges/${auth.currentKid.id}`),
+        api.get(`/challenges?kid_id=${auth.currentKid.id}`)
       ]);
       setStats(statsRes.data);
       setKidData(kidRes.data);
+      setStreak(streakRes.data);
+      setBadges(badgesRes.data.badges || []);
+      setChallenges(challengesRes.data.filter(c => !c.completed_by?.includes(auth.currentKid.id)));
     } catch (error) {
       console.error("Failed to fetch data:", error);
       toast.error("Failed to load dashboard");
@@ -70,10 +80,16 @@ const StudentDashboard = ({ auth }) => {
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {streak?.current_streak > 0 && (
+              <div className="flex items-center gap-1 text-orange-500 bg-orange-50 px-3 py-1.5 rounded-full">
+                <Flame className="w-4 h-4" />
+                <span className="font-bold text-sm">{streak.current_streak}</span>
+              </div>
+            )}
             <div className="points-badge" data-testid="points-display">
               <Trophy className="w-5 h-5" />
-              {stats?.points || 0} pts
+              {stats?.points || 0}
             </div>
             <button 
               onClick={handleLogout}
@@ -87,93 +103,153 @@ const StudentDashboard = ({ auth }) => {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-6 py-8">
+      <main className="max-w-4xl mx-auto px-6 py-6">
         {/* Progress Card */}
-        <div className="card-playful bg-gradient-to-br from-indigo-500 to-purple-600 text-white mb-8 animate-fade-in">
+        <div className="card-playful bg-gradient-to-br from-indigo-500 to-purple-600 text-white mb-6 animate-fade-in">
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-indigo-100 text-sm font-semibold">Progress to {nextMilestone} points</p>
               <p className="text-3xl font-bold font-heading">{stats?.points || 0} / {nextMilestone}</p>
             </div>
-            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
-              <Sparkles className="w-8 h-8 text-white" />
+            <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center">
+              <Sparkles className="w-7 h-7 text-white" />
             </div>
           </div>
           <Progress value={progressToMilestone} className="h-3 bg-white/20" />
-          <p className="text-indigo-100 text-sm mt-2">{100 - progressToMilestone} more points to next milestone!</p>
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-8 stagger-children">
-          <div className="card-playful text-center animate-fade-in">
-            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-              <Star className="w-6 h-6 text-green-600" />
-            </div>
-            <p className="text-2xl font-bold text-gray-800 font-heading">{stats?.approved_tasks || 0}</p>
-            <p className="text-sm text-gray-500">Completed</p>
+        <div className="grid grid-cols-4 gap-3 mb-6 stagger-children">
+          <div className="card-playful text-center py-3 animate-fade-in">
+            <Star className="w-5 h-5 text-green-500 mx-auto mb-1" />
+            <p className="text-xl font-bold text-gray-800 font-heading">{stats?.approved_tasks || 0}</p>
+            <p className="text-xs text-gray-500">Done</p>
           </div>
-          
-          <div className="card-playful text-center animate-fade-in">
-            <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-              <BookOpen className="w-6 h-6 text-amber-600" />
-            </div>
-            <p className="text-2xl font-bold text-gray-800 font-heading">{stats?.pending_tasks || 0}</p>
-            <p className="text-sm text-gray-500">Pending</p>
+          <div className="card-playful text-center py-3 animate-fade-in">
+            <Clock className="w-5 h-5 text-amber-500 mx-auto mb-1" />
+            <p className="text-xl font-bold text-gray-800 font-heading">{stats?.pending_tasks || 0}</p>
+            <p className="text-xs text-gray-500">Pending</p>
           </div>
-          
-          <div className="card-playful text-center animate-fade-in">
-            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-              <Gift className="w-6 h-6 text-purple-600" />
-            </div>
-            <p className="text-2xl font-bold text-gray-800 font-heading">{stats?.pending_redemptions || 0}</p>
-            <p className="text-sm text-gray-500">Rewards</p>
+          <div className="card-playful text-center py-3 animate-fade-in">
+            <Award className="w-5 h-5 text-purple-500 mx-auto mb-1" />
+            <p className="text-xl font-bold text-gray-800 font-heading">{badges.length}</p>
+            <p className="text-xs text-gray-500">Badges</p>
           </div>
+          <button 
+            onClick={() => navigate("/leaderboard")}
+            className="card-playful text-center py-3 animate-fade-in hover:border-indigo-300"
+          >
+            <Users className="w-5 h-5 text-indigo-500 mx-auto mb-1" />
+            <p className="text-xl font-bold text-gray-800 font-heading">VS</p>
+            <p className="text-xs text-gray-500">Rank</p>
+          </button>
         </div>
 
-        {/* Quick Actions */}
-        <h2 className="text-xl font-bold text-gray-800 mb-4 font-heading">Quick Actions</h2>
-        <div className="space-y-3 mb-8 stagger-children">
+        {/* Active Challenges */}
+        {challenges.length > 0 && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-bold text-gray-800 font-heading flex items-center gap-2">
+                <Target className="w-5 h-5 text-purple-500" />
+                Active Challenges
+              </h2>
+              <button 
+                onClick={() => navigate("/student/challenges")}
+                className="text-sm text-purple-600 font-semibold"
+              >
+                View All
+              </button>
+            </div>
+            <div className="card-playful bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                  <Target className="w-5 h-5 text-purple-600" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-bold text-gray-800">{challenges[0].title}</h4>
+                  <p className="text-sm text-gray-500">{challenges[0].points_reward} points</p>
+                </div>
+                <span className="text-purple-600 font-bold">{challenges.length} active</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Main Actions Grid */}
+        <div className="grid grid-cols-2 gap-3 mb-6 stagger-children">
           <button
             data-testid="submit-task-btn"
             onClick={() => navigate("/student/submit")}
-            className="w-full card-playful flex items-center gap-4 hover:border-indigo-300 animate-fade-in"
+            className="card-playful flex flex-col items-center gap-2 py-5 hover:border-indigo-300 animate-fade-in"
           >
-            <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center flex-shrink-0">
-              <PlusCircle className="w-7 h-7 text-white" />
+            <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center">
+              <PlusCircle className="w-6 h-6 text-white" />
             </div>
-            <div className="flex-1 text-left">
-              <h3 className="font-bold text-gray-800 font-heading">Submit Homework</h3>
-              <p className="text-sm text-gray-500">Tell us what you completed!</p>
-            </div>
-            <ChevronRight className="w-5 h-5 text-gray-400" />
+            <span className="font-bold text-gray-800 font-heading">Submit Homework</span>
           </button>
 
           <button
             data-testid="ai-tutor-btn"
             onClick={() => navigate("/student/tutor")}
-            className="w-full card-playful flex items-center gap-4 hover:border-emerald-300 animate-fade-in"
+            className="card-playful flex flex-col items-center gap-2 py-5 hover:border-emerald-300 animate-fade-in"
           >
-            <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center flex-shrink-0">
-              <MessageCircle className="w-7 h-7 text-white" />
+            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center">
+              <MessageCircle className="w-6 h-6 text-white" />
             </div>
-            <div className="flex-1 text-left">
-              <h3 className="font-bold text-gray-800 font-heading">AI Homework Helper</h3>
-              <p className="text-sm text-gray-500">Get help with any subject</p>
-            </div>
-            <ChevronRight className="w-5 h-5 text-gray-400" />
+            <span className="font-bold text-gray-800 font-heading">AI Helper</span>
           </button>
 
+          <button
+            data-testid="study-timer-btn"
+            onClick={() => navigate("/student/timer")}
+            className="card-playful flex flex-col items-center gap-2 py-5 hover:border-blue-300 animate-fade-in"
+          >
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl flex items-center justify-center">
+              <Clock className="w-6 h-6 text-white" />
+            </div>
+            <span className="font-bold text-gray-800 font-heading">Study Timer</span>
+          </button>
+
+          <button
+            data-testid="typing-btn"
+            onClick={() => navigate("/student/typing")}
+            className="card-playful flex flex-col items-center gap-2 py-5 hover:border-pink-300 animate-fade-in"
+          >
+            <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-rose-600 rounded-2xl flex items-center justify-center">
+              <Keyboard className="w-6 h-6 text-white" />
+            </div>
+            <span className="font-bold text-gray-800 font-heading">Typing Practice</span>
+          </button>
+        </div>
+
+        {/* Secondary Actions */}
+        <div className="space-y-2 mb-6">
           <button
             data-testid="reward-shop-btn"
             onClick={() => navigate("/student/rewards")}
             className="w-full card-playful flex items-center gap-4 hover:border-amber-300 animate-fade-in"
           >
-            <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center flex-shrink-0">
-              <Gift className="w-7 h-7 text-white" />
+            <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+              <Gift className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1 text-left">
               <h3 className="font-bold text-gray-800 font-heading">Reward Shop</h3>
-              <p className="text-sm text-gray-500">Spend your points on cool stuff!</p>
+              <p className="text-sm text-gray-500">Spend your points!</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-gray-400" />
+          </button>
+
+          <button
+            data-testid="badges-btn"
+            onClick={() => navigate("/student/badges")}
+            className="w-full card-playful flex items-center gap-4 hover:border-purple-300 animate-fade-in"
+          >
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center flex-shrink-0">
+              <Award className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1 text-left">
+              <h3 className="font-bold text-gray-800 font-heading">My Badges</h3>
+              <p className="text-sm text-gray-500">{badges.length} badges earned</p>
             </div>
             <ChevronRight className="w-5 h-5 text-gray-400" />
           </button>
@@ -183,12 +259,12 @@ const StudentDashboard = ({ auth }) => {
             onClick={() => navigate("/student/history")}
             className="w-full card-playful flex items-center gap-4 hover:border-gray-300 animate-fade-in"
           >
-            <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center flex-shrink-0">
-              <History className="w-7 h-7 text-gray-600" />
+            <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center flex-shrink-0">
+              <History className="w-6 h-6 text-gray-600" />
             </div>
             <div className="flex-1 text-left">
               <h3 className="font-bold text-gray-800 font-heading">Points History</h3>
-              <p className="text-sm text-gray-500">See how you earned your points</p>
+              <p className="text-sm text-gray-500">See how you earned points</p>
             </div>
             <ChevronRight className="w-5 h-5 text-gray-400" />
           </button>
@@ -197,27 +273,27 @@ const StudentDashboard = ({ auth }) => {
         {/* Recent Tasks */}
         {stats?.recent_tasks?.length > 0 && (
           <>
-            <h2 className="text-xl font-bold text-gray-800 mb-4 font-heading">Recent Tasks</h2>
-            <div className="space-y-3">
+            <h2 className="text-lg font-bold text-gray-800 mb-3 font-heading">Recent Tasks</h2>
+            <div className="space-y-2">
               {stats.recent_tasks.slice(0, 3).map((task) => (
-                <div key={task.id} className="card-playful flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                <div key={task.id} className="card-playful flex items-center gap-3 py-3">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                     task.status === "approved" ? "bg-green-100" :
                     task.status === "rejected" ? "bg-red-100" : "bg-amber-100"
                   }`}>
-                    <BookOpen className={`w-5 h-5 ${
+                    <BookOpen className={`w-4 h-4 ${
                       task.status === "approved" ? "text-green-600" :
                       task.status === "rejected" ? "text-red-600" : "text-amber-600"
                     }`} />
                   </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-gray-800">{task.title}</h4>
-                    <p className="text-sm text-gray-500">{task.subject}</p>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-gray-800 text-sm truncate">{task.title}</h4>
+                    <p className="text-xs text-gray-500">{task.subject}</p>
                   </div>
                   {task.status === "approved" && task.points_awarded > 0 && (
-                    <span className="text-green-600 font-bold">+{task.points_awarded}</span>
+                    <span className="text-green-600 font-bold text-sm">+{task.points_awarded}</span>
                   )}
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
                     task.status === "approved" ? "bg-green-100 text-green-700" :
                     task.status === "rejected" ? "bg-red-100 text-red-700" : 
                     "bg-amber-100 text-amber-700"
