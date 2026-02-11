@@ -34,6 +34,7 @@ SUBSCRIPTION_PRICE = 1.10
 # Admin emails - these get free premium access
 ADMIN_EMAILS = [
     "colin.starwars.gg@gmail.com",
+    "dean.dhchapman@gmail.com",
 ]
 
 def is_admin_email(email: str) -> bool:
