@@ -4,7 +4,7 @@ import { api } from "@/App";
 import { toast } from "sonner";
 import { 
   Users, Gift, CheckCircle, LogOut, Settings,
-  ChevronRight, Clock, AlertCircle, UserPlus
+  ChevronRight, Clock, AlertCircle, UserPlus, Target
 } from "lucide-react";
 
 const ParentDashboard = ({ auth }) => {
