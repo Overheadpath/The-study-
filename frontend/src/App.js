@@ -107,6 +107,18 @@ export const useAuth = () => {
     localStorage.removeItem("studyhelper_mode");
   }, []);
 
+  // Direct kid login (when kid logs in with their own email)
+  const loginKid = useCallback((kidData) => {
+    setCurrentKid(kidData);
+    setMode("student");
+    setIsAuthenticated(true);
+    localStorage.setItem("studyhelper_current_kid", JSON.stringify(kidData));
+    localStorage.setItem("studyhelper_mode", "student");
+    // Clear family data - kid doesn't have parent access
+    setFamily(null);
+    localStorage.removeItem("studyhelper_family");
+  }, []);
+
   const refreshKid = useCallback(async () => {
     if (currentKid?.id) {
       try {
