@@ -138,6 +138,81 @@ class PointsHistory(BaseModel):
     reward_id: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+# ============ NEW FEATURE MODELS ============
+
+class StudySession(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    kid_id: str
+    subject: str
+    goal_minutes: int
+    actual_minutes: int
+    points_earned: int
+    completed: bool = False
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class StudySessionCreate(BaseModel):
+    kid_id: str
+    subject: str
+    goal_minutes: int
+    actual_minutes: int
+
+class StudyStreak(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    kid_id: str
+    current_streak: int = 0
+    longest_streak: int = 0
+    last_study_date: Optional[str] = None
+
+class Badge(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    kid_id: str
+    badge_type: str  # maths_master, english_expert, etc.
+    tier: int = 1  # 1=Bronze, 2=Silver, 3=Gold, 4=Master
+    tasks_completed: int = 0
+    earned_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class WeeklyChallenge(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
+    description: str
+    points_reward: int
+    target_kid_id: Optional[str] = None  # None means all kids
+    deadline: str
+    status: str = "active"  # active, completed, expired
+    completed_by: List[str] = []
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class WeeklyChallengeCreate(BaseModel):
+    title: str
+    description: str
+    points_reward: int
+    target_kid_id: Optional[str] = None
+    deadline: str
+
+class TypingSession(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    kid_id: str
+    wpm: int  # words per minute
+    accuracy: float
+    duration_seconds: int
+    points_earned: int
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class TypingSessionCreate(BaseModel):
+    kid_id: str
+    wpm: int
+    accuracy: float
+    duration_seconds: int
+
+class TaskPointEstimate(BaseModel):
+    estimated_points: int
+    reasoning: str
+
 class Settings(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = "main_settings"
