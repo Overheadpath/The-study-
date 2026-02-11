@@ -355,7 +355,7 @@ async def create_task(data: TaskCreate):
     await db.tasks.insert_one(serialize_doc(task.model_dump()))
     return task
 
-@api_router.put("/tasks/{task_id}/approve", response_model=Task)
+@api_router.put("/tasks/{task_id}/approve")
 async def approve_task(task_id: str, data: TaskApproval):
     """Approve or reject a task (parent action)"""
     task = await db.tasks.find_one({"id": task_id}, {"_id": 0})
@@ -372,6 +372,8 @@ async def approve_task(task_id: str, data: TaskApproval):
     
     await db.tasks.update_one({"id": task_id}, {"$set": update_data})
     
+    badge_earned = None
+    
     # If approved, update kid's points and add to history
     if data.status == "approved" and data.points_awarded > 0:
         await db.kids.update_one(
@@ -387,9 +389,57 @@ async def approve_task(task_id: str, data: TaskApproval):
             task_id=task_id
         )
         await db.points_history.insert_one(serialize_doc(history.model_dump()))
+        
+        # Update streak
+        await update_streak_simple(task["kid_id"])
     
     updated_task = await db.tasks.find_one({"id": task_id}, {"_id": 0})
-    return updated_task
+    return {"task": updated_task, "badge_earned": badge_earned}
+
+async def update_streak_simple(kid_id: str):
+    """Simple streak update for task approval"""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    streak = await db.streaks.find_one({"kid_id": kid_id}, {"_id": 0})
+    
+    if not streak:
+        new_streak = {
+            "id": str(uuid.uuid4()),
+            "kid_id": kid_id,
+            "current_streak": 1,
+            "longest_streak": 1,
+            "last_study_date": today
+        }
+        await db.streaks.insert_one(new_streak)
+        return
+    
+    last_date = streak.get("last_study_date")
+    
+    if last_date == today:
+        return
+    
+    yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+    
+    if last_date == yesterday:
+        new_current = streak.get("current_streak", 0) + 1
+        new_longest = max(new_current, streak.get("longest_streak", 0))
+        
+        await db.streaks.update_one(
+            {"kid_id": kid_id},
+            {"$set": {
+                "current_streak": new_current,
+                "longest_streak": new_longest,
+                "last_study_date": today
+            }}
+        )
+    else:
+        await db.streaks.update_one(
+            {"kid_id": kid_id},
+            {"$set": {
+                "current_streak": 1,
+                "last_study_date": today
+            }}
+        )
 
 @api_router.delete("/tasks/{task_id}")
 async def delete_task(task_id: str):
