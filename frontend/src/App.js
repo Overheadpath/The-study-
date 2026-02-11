@@ -55,6 +55,7 @@ export const useAuth = () => {
     
     if (savedFamily) {
       setFamily(JSON.parse(savedFamily));
+      setIsAuthenticated(true);
     }
     if (savedKid) {
       setCurrentKid(JSON.parse(savedKid));
@@ -63,7 +64,6 @@ export const useAuth = () => {
     }
     if (savedMode === "parent" && savedFamily) {
       setMode("parent");
-      setIsAuthenticated(true);
     }
   }, []);
 
