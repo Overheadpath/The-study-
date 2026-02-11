@@ -750,7 +750,27 @@ async def create_kid(data: KidCreate):
                 detail=f"Free plan allows only {status.max_children} child. Upgrade to Premium for unlimited children!"
             )
     
-    kid = Kid(**data.model_dump())
+    # Check if email already exists (for kid or parent)
+    if data.email:
+        existing_kid = await db.kids.find_one({"email": data.email.lower()}, {"_id": 0})
+        existing_family = await db.families.find_one({"email": data.email.lower()}, {"_id": 0})
+        if existing_kid or existing_family:
+            raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Create kid data
+    kid_data = data.model_dump()
+    
+    # Hash password if provided
+    if kid_data.get("password"):
+        kid_data["password_hash"] = hash_password(kid_data.pop("password"))
+    else:
+        kid_data.pop("password", None)
+    
+    # Lowercase email
+    if kid_data.get("email"):
+        kid_data["email"] = kid_data["email"].lower()
+    
+    kid = Kid(**kid_data)
     await db.kids.insert_one(serialize_doc(kid.model_dump()))
     return kid
 
@@ -758,6 +778,20 @@ async def create_kid(data: KidCreate):
 async def update_kid(kid_id: str, data: KidUpdate):
     """Update a kid"""
     update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    
+    # Handle password update
+    if "password" in update_data:
+        update_data["password_hash"] = hash_password(update_data.pop("password"))
+    
+    # Handle email update - check uniqueness
+    if "email" in update_data:
+        email_lower = update_data["email"].lower()
+        existing_kid = await db.kids.find_one({"email": email_lower, "id": {"$ne": kid_id}}, {"_id": 0})
+        existing_family = await db.families.find_one({"email": email_lower}, {"_id": 0})
+        if existing_kid or existing_family:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        update_data["email"] = email_lower
+    
     if not update_data:
         raise HTTPException(status_code=400, detail="No data to update")
     
