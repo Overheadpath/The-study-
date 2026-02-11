@@ -312,15 +312,300 @@ def serialize_doc(doc):
         result[key] = serialize_datetime(value)
     return result
 
-# ============ AUTH ROUTES ============
+def hash_password(password: str) -> str:
+    """Simple password hashing"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(password: str, hashed: str) -> bool:
+    """Verify password against hash"""
+    return hash_password(password) == hashed
+
+async def get_family_subscription_status(family_id: str) -> SubscriptionStatus:
+    """Get subscription status for a family"""
+    family = await db.families.find_one({"id": family_id}, {"_id": 0})
+    if not family:
+        return SubscriptionStatus(
+            is_premium=False, can_add_child=True, 
+            ai_questions_remaining=FREE_AI_QUESTIONS_PER_DAY, max_children=FREE_MAX_CHILDREN
+        )
+    
+    is_premium = family.get("is_premium", False)
+    expires = family.get("premium_expires")
+    
+    # Check if premium expired
+    if is_premium and expires:
+        expire_date = datetime.fromisoformat(expires.replace('Z', '+00:00'))
+        if expire_date < datetime.now(timezone.utc):
+            is_premium = False
+            await db.families.update_one({"id": family_id}, {"$set": {"is_premium": False}})
+    
+    # Count kids
+    kids_count = await db.kids.count_documents({"family_id": family_id})
+    
+    # AI questions remaining
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    ai_date = family.get("ai_questions_date")
+    ai_used = family.get("ai_questions_today", 0) if ai_date == today else 0
+    
+    if is_premium:
+        return SubscriptionStatus(
+            is_premium=True,
+            expires=expires,
+            can_add_child=True,
+            ai_questions_remaining=999,  # Unlimited
+            max_children=99
+        )
+    else:
+        return SubscriptionStatus(
+            is_premium=False,
+            expires=None,
+            can_add_child=kids_count < FREE_MAX_CHILDREN,
+            ai_questions_remaining=max(0, FREE_AI_QUESTIONS_PER_DAY - ai_used),
+            max_children=FREE_MAX_CHILDREN
+        )
+
+async def increment_ai_usage(family_id: str) -> bool:
+    """Increment AI question usage. Returns False if limit reached."""
+    status = await get_family_subscription_status(family_id)
+    if status.is_premium:
+        return True
+    
+    if status.ai_questions_remaining <= 0:
+        return False
+    
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    family = await db.families.find_one({"id": family_id}, {"_id": 0})
+    
+    if family:
+        ai_date = family.get("ai_questions_date")
+        if ai_date != today:
+            # New day, reset counter
+            await db.families.update_one(
+                {"id": family_id},
+                {"$set": {"ai_questions_today": 1, "ai_questions_date": today}}
+            )
+        else:
+            await db.families.update_one(
+                {"id": family_id},
+                {"$inc": {"ai_questions_today": 1}}
+            )
+    return True
+
+# ============ USER REGISTRATION & AUTH ============
+
+@api_router.post("/auth/register", response_model=FamilyResponse)
+async def register_family(data: FamilyRegister):
+    """Register a new family account"""
+    # Check if email exists
+    existing = await db.families.find_one({"email": data.email.lower()}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    family = Family(
+        email=data.email.lower(),
+        password_hash=hash_password(data.password),
+        family_name=data.family_name
+    )
+    
+    await db.families.insert_one(serialize_doc(family.model_dump()))
+    
+    return FamilyResponse(
+        id=family.id,
+        email=family.email,
+        family_name=family.family_name,
+        is_premium=False,
+        kids_count=0
+    )
+
+@api_router.post("/auth/login", response_model=FamilyResponse)
+async def login_family(data: FamilyLogin):
+    """Login to family account"""
+    family = await db.families.find_one({"email": data.email.lower()}, {"_id": 0})
+    if not family:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    if not verify_password(data.password, family.get("password_hash", "")):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    # Count kids
+    kids_count = await db.kids.count_documents({"family_id": family["id"]})
+    
+    return FamilyResponse(
+        id=family["id"],
+        email=family["email"],
+        family_name=family.get("family_name", "My Family"),
+        is_premium=family.get("is_premium", False),
+        premium_expires=family.get("premium_expires"),
+        kids_count=kids_count
+    )
+
+@api_router.get("/auth/family/{family_id}", response_model=FamilyResponse)
+async def get_family(family_id: str):
+    """Get family info"""
+    family = await db.families.find_one({"id": family_id}, {"_id": 0})
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
+    
+    kids_count = await db.kids.count_documents({"family_id": family_id})
+    
+    return FamilyResponse(
+        id=family["id"],
+        email=family["email"],
+        family_name=family.get("family_name", "My Family"),
+        is_premium=family.get("is_premium", False),
+        premium_expires=family.get("premium_expires"),
+        kids_count=kids_count
+    )
+
+@api_router.get("/subscription/status/{family_id}", response_model=SubscriptionStatus)
+async def get_subscription_status(family_id: str):
+    """Get subscription status for a family"""
+    return await get_family_subscription_status(family_id)
+
+# ============ STRIPE PAYMENT ROUTES ============
+
+@api_router.post("/subscription/checkout")
+async def create_checkout_session(request: Request, family_id: str, origin_url: str):
+    """Create a Stripe checkout session for premium subscription"""
+    family = await db.families.find_one({"id": family_id}, {"_id": 0})
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
+    
+    host_url = str(request.base_url).rstrip('/')
+    webhook_url = f"{host_url}/api/webhook/stripe"
+    
+    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+    
+    success_url = f"{origin_url}/payment/success?session_id={{CHECKOUT_SESSION_ID}}"
+    cancel_url = f"{origin_url}/payment/cancel"
+    
+    checkout_request = CheckoutSessionRequest(
+        amount=SUBSCRIPTION_PRICE,
+        currency="usd",
+        success_url=success_url,
+        cancel_url=cancel_url,
+        metadata={
+            "family_id": family_id,
+            "type": "premium_subscription"
+        }
+    )
+    
+    session = await stripe_checkout.create_checkout_session(checkout_request)
+    
+    # Create payment transaction record
+    transaction = PaymentTransaction(
+        family_id=family_id,
+        session_id=session.session_id,
+        amount=SUBSCRIPTION_PRICE,
+        currency="usd",
+        payment_status="pending",
+        metadata={"type": "premium_subscription"}
+    )
+    await db.payment_transactions.insert_one(serialize_doc(transaction.model_dump()))
+    
+    return {"checkout_url": session.url, "session_id": session.session_id}
+
+@api_router.get("/subscription/status/check/{session_id}")
+async def check_payment_status(session_id: str, request: Request):
+    """Check payment status and activate subscription if paid"""
+    host_url = str(request.base_url).rstrip('/')
+    webhook_url = f"{host_url}/api/webhook/stripe"
+    
+    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+    
+    try:
+        status = await stripe_checkout.get_checkout_status(session_id)
+        
+        # Find the transaction
+        transaction = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
+        if not transaction:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+        
+        # Update transaction status
+        await db.payment_transactions.update_one(
+            {"session_id": session_id},
+            {"$set": {"payment_status": status.payment_status}}
+        )
+        
+        # If paid, activate premium
+        if status.payment_status == "paid" and transaction.get("payment_status") != "paid":
+            family_id = transaction.get("family_id") or status.metadata.get("family_id")
+            if family_id:
+                # Set premium for 30 days
+                expires = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+                await db.families.update_one(
+                    {"id": family_id},
+                    {"$set": {"is_premium": True, "premium_expires": expires}}
+                )
+        
+        return {
+            "status": status.status,
+            "payment_status": status.payment_status,
+            "amount": status.amount_total,
+            "currency": status.currency
+        }
+    except Exception as e:
+        logging.error(f"Payment status check error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to check payment status")
+
+@api_router.post("/webhook/stripe")
+async def stripe_webhook(request: Request):
+    """Handle Stripe webhooks"""
+    body = await request.body()
+    signature = request.headers.get("Stripe-Signature")
+    
+    host_url = str(request.base_url).rstrip('/')
+    webhook_url = f"{host_url}/api/webhook/stripe"
+    
+    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+    
+    try:
+        event = await stripe_checkout.handle_webhook(body, signature)
+        
+        if event.payment_status == "paid":
+            family_id = event.metadata.get("family_id")
+            if family_id:
+                expires = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+                await db.families.update_one(
+                    {"id": family_id},
+                    {"$set": {"is_premium": True, "premium_expires": expires}}
+                )
+                
+                await db.payment_transactions.update_one(
+                    {"session_id": event.session_id},
+                    {"$set": {"payment_status": "paid"}}
+                )
+        
+        return {"status": "success"}
+    except Exception as e:
+        logging.error(f"Webhook error: {e}")
+        return {"status": "error", "message": str(e)}
+
+# ============ LEGACY AUTH (PIN-based for existing users) ============
 
 @api_router.post("/auth/verify-pin", response_model=PinVerifyResponse)
 async def verify_pin(data: PinVerify):
     """Verify PIN for parent or student mode"""
+    # If family_id provided, use family-specific auth
+    if data.family_id:
+        family = await db.families.find_one({"id": data.family_id}, {"_id": 0})
+        if data.mode == "parent":
+            if family and family.get("parent_pin") == data.pin:
+                return PinVerifyResponse(valid=True, mode="parent", family_id=data.family_id)
+            return PinVerifyResponse(valid=False, mode="parent")
+        elif data.mode == "student":
+            kid = await db.kids.find_one({"pin": data.pin, "family_id": data.family_id}, {"_id": 0})
+            if kid:
+                return PinVerifyResponse(
+                    valid=True, mode="student", 
+                    kid_id=kid["id"], kid_name=kid["name"], family_id=data.family_id
+                )
+            return PinVerifyResponse(valid=False, mode="student")
+    
+    # Legacy: no family_id (for backwards compatibility)
     if data.mode == "parent":
         settings = await db.settings.find_one({"id": "main_settings"}, {"_id": 0})
         if not settings:
-            # Create default settings
             default_settings = Settings()
             await db.settings.insert_one(serialize_doc(default_settings.model_dump()))
             settings = default_settings.model_dump()
