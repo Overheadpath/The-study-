@@ -367,17 +367,17 @@ const ManageKids = ({ auth }) => {
             {/* Divider */}
             <div className="relative py-2">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-gray-200" />
+                <span className="w-full border-t border-indigo-300" />
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="bg-white px-2 text-gray-500">Optional: Direct Email Login</span>
+                <span className="bg-white px-2 text-indigo-600 font-semibold">🔑 Kid's Own Login (Recommended)</span>
               </div>
             </div>
 
             {/* Email Login Section */}
-            <div className="bg-indigo-50 rounded-xl p-4 space-y-3">
-              <p className="text-xs text-indigo-700">
-                Set up an email and password so your child can log in directly to their student dashboard.
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 space-y-3 border border-indigo-200">
+              <p className="text-xs text-indigo-700 font-medium">
+                ✨ Set up an email and password so your child can log in directly on the main login page - they'll only see their student dashboard!
               </p>
               
               <div>
