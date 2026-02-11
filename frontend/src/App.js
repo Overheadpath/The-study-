@@ -69,6 +69,7 @@ export const useAuth = () => {
 
   const loginFamily = useCallback((familyData) => {
     setFamily(familyData);
+    setIsAuthenticated(true);
     localStorage.setItem("studyhelper_family", JSON.stringify(familyData));
   }, []);
 
