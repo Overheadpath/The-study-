@@ -221,6 +221,15 @@ const TaskApproval = ({ auth }) => {
                 </div>
                 <h4 className="font-bold text-gray-800 mb-2">{selectedTask.title}</h4>
                 <p className="text-sm text-gray-600">{selectedTask.description}</p>
+                {selectedTask.image_url && (
+                  <div className="mt-3">
+                    <img 
+                      src={selectedTask.image_url} 
+                      alt="Homework" 
+                      className="max-w-full rounded-lg border border-gray-200"
+                    />
+                  </div>
+                )}
                 <p className="text-xs text-gray-400 mt-2">
                   Submitted by {getKidName(selectedTask.kid_id)} • {formatDate(selectedTask.created_at)}
                 </p>
