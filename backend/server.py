@@ -253,6 +253,7 @@ class FamilyResponse(BaseModel):
     id: str
     email: str
     family_name: str
+    curriculum: str = "caps"
     is_premium: bool
     premium_expires: Optional[str] = None
     kids_count: int = 0
