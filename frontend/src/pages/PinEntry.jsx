@@ -273,7 +273,7 @@ const PinEntry = ({ onLogin }) => {
 
         {/* PIN Setup Dialog */}
         <Dialog open={!!setupKid} onOpenChange={closeSetupDialog}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md z-50">
             <DialogHeader>
               <DialogTitle className="font-heading text-xl flex items-center gap-2">
                 <Lock className="w-6 h-6 text-indigo-500" />
@@ -287,7 +287,7 @@ const PinEntry = ({ onLogin }) => {
               </DialogDescription>
             </DialogHeader>
             
-            <div className="py-6">
+            <div className="py-6 relative z-50">
               {setupStep === 1 ? (
                 <div className="flex justify-center gap-3">
                   {setupPin.map((digit, index) => (
