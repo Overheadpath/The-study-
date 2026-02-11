@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/App";
 import { toast } from "sonner";
-import { ArrowLeft, Send, BookOpen, CheckCircle, Camera, X, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Send, BookOpen, CheckCircle, Camera, X, Image as ImageIcon, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,6 +22,8 @@ const SubmitTask = ({ auth }) => {
   const [submitted, setSubmitted] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [estimatedPoints, setEstimatedPoints] = useState(null);
+  const [estimating, setEstimating] = useState(false);
   const fileInputRef = useRef(null);
   
   const [form, setForm] = useState({
@@ -48,6 +50,35 @@ const SubmitTask = ({ auth }) => {
       console.error("Failed to fetch data:", error);
     }
   };
+
+  // Estimate points when form changes
+  useEffect(() => {
+    const estimatePoints = async () => {
+      if (!form.title.trim() || !form.description.trim() || !form.subject || !auth.currentKid?.id) {
+        setEstimatedPoints(null);
+        return;
+      }
+
+      setEstimating(true);
+      try {
+        const response = await api.post("/tasks/estimate-points", {
+          kid_id: auth.currentKid.id,
+          title: form.title,
+          description: form.description,
+          subject: form.subject
+        });
+        setEstimatedPoints(response.data);
+      } catch (error) {
+        console.error("Failed to estimate points:", error);
+      } finally {
+        setEstimating(false);
+      }
+    };
+
+    // Debounce the estimation
+    const timer = setTimeout(estimatePoints, 1000);
+    return () => clearTimeout(timer);
+  }, [form.title, form.description, form.subject, auth.currentKid?.id]);
 
   const handleImageSelect = async (e) => {
     const file = e.target.files?.[0];
