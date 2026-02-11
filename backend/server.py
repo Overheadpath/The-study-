@@ -46,6 +46,7 @@ async def root():
 class Kid(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    family_id: Optional[str] = None  # Links kid to a family account
     name: str
     grade: int
     pin: str
