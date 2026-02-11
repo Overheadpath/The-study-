@@ -35,7 +35,7 @@ SUBSCRIPTION_PRICE = 1.10
 ADMIN_EMAILS = [
     "colin.starwars.gg@gmail.com",
     "dean.dhchapman@gmail.com",
-    "colcha@sggh.co.za",
+    "colcha@sggs.co.za",
 ]
 
 def is_admin_email(email: str) -> bool:
