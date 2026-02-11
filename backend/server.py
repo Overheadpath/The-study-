@@ -343,6 +343,16 @@ async def get_family_subscription_status(family_id: str) -> SubscriptionStatus:
             ai_questions_remaining=FREE_AI_QUESTIONS_PER_DAY, max_children=FREE_MAX_CHILDREN
         )
     
+    # Check if admin email - admins get free premium forever
+    if is_admin_email(family.get("email", "")):
+        return SubscriptionStatus(
+            is_premium=True,
+            expires=None,  # Never expires for admins
+            can_add_child=True,
+            ai_questions_remaining=999,  # Unlimited
+            max_children=99
+        )
+    
     is_premium = family.get("is_premium", False)
     expires = family.get("premium_expires")
     
