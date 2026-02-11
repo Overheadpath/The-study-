@@ -1,8 +1,7 @@
-const CACHE_NAME = 'study-helper-v1';
+const CACHE_NAME = 'study-helper-v2';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/static/js/bundle.js',
   '/manifest.json'
 ];
 
@@ -38,26 +37,53 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event - network first for navigation, cache for assets
 self.addEventListener('fetch', (event) => {
-  // Skip non-GET requests and API calls
-  if (event.request.method !== 'GET' || event.request.url.includes('/api/')) {
+  const url = new URL(event.request.url);
+  
+  // Always go to network for API calls - NEVER cache these
+  if (url.pathname.startsWith('/api/') || event.request.url.includes('/api/')) {
+    return; // Let the browser handle it normally
+  }
+  
+  // Always go to network for POST/PUT/DELETE requests
+  if (event.request.method !== 'GET') {
     return;
   }
-
+  
+  // For navigation requests (HTML pages), use network-first strategy
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // Cache the latest version
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+          return response;
+        })
+        .catch(() => {
+          // If network fails, try cache
+          return caches.match(event.request).then((response) => {
+            return response || caches.match('/');
+          });
+        })
+    );
+    return;
+  }
+  
+  // For other assets, use cache-first strategy
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
-        // Return cached response or fetch from network
         if (response) {
           return response;
         }
         return fetch(event.request).then((response) => {
-          // Don't cache non-successful responses
-          if (!response || response.status !== 200 || response.type !== 'basic') {
+          if (!response || response.status !== 200) {
             return response;
           }
-          // Clone and cache the response
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseToCache);
@@ -66,13 +92,12 @@ self.addEventListener('fetch', (event) => {
         });
       })
       .catch(() => {
-        // Return offline page if available
         return caches.match('/');
       })
   );
 });
 
-// Handle push notifications (for future use)
+// Handle push notifications
 self.addEventListener('push', (event) => {
   const options = {
     body: event.data?.text() || 'New update from Study Helper!',
