@@ -264,6 +264,7 @@ class FamilyResponse(BaseModel):
     family_name: str
     curriculum: str = "caps"
     is_premium: bool
+    is_admin: bool = False
     premium_expires: Optional[str] = None
     kids_count: int = 0
 
