@@ -7,74 +7,102 @@ Build a Study Helper app with rewards system for South African CAPS curriculum s
 1. **Student (Grade 4-9)**: Primary user who submits homework, gets AI help, earns points, and redeems rewards
 2. **Parent/Au Pair**: Supervisor who approves tasks, awards points, manages kids and rewards
 
-## Core Requirements
-- PIN-based authentication (Parent vs Student mode)
-- AI Homework Helper (CAPS curriculum aligned)
-- Task submission and approval workflow
-- Points-based reward system
-- Support for multiple kids with different grades
+## SaaS Model (Implemented Feb 2026)
+The app has been pivoted to a multi-tenant SaaS model:
 
-## What's Been Implemented (Jan 2026)
+### Free Tier
+- 1 child profile
+- 5 AI questions per day
+- Non-intrusive banner ads
 
-### Backend (FastAPI + MongoDB)
-- [x] PIN authentication for parent and students
-- [x] Kids CRUD operations (add, edit, delete, view)
-- [x] Tasks CRUD with approval workflow
-- [x] Rewards CRUD with redemption system
+### Premium Tier (R20/month ~ $1.10 USD)
+- Unlimited child profiles
+- Unlimited AI questions
+- Ad-free experience
+
+## What's Been Implemented
+
+### Authentication & User Management
+- [x] Email/password registration for families
+- [x] JWT-less session management (localStorage)
+- [x] SHA256 password hashing
+- [x] Family accounts with subscription tracking
+
+### Stripe Payment Integration
+- [x] Stripe Checkout for premium subscription
+- [x] Payment verification on success callback
+- [x] 30-day premium subscription activation
+- [x] Transaction logging in database
+
+### Core Features
+- [x] AI Homework Helper (CAPS curriculum, Socratic method)
+- [x] Task submission with image uploads
+- [x] Task approval workflow with points and ratings
+- [x] Reward shop with point redemption
 - [x] Points tracking and history
-- [x] AI Chat integration with GPT-5.2 (Emergent LLM Key)
-- [x] CAPS subjects by grade level (4-9)
-- [x] Dashboard statistics endpoints
 
-### Frontend (React + Tailwind + Shadcn)
-- [x] PIN Entry screen with mode selection
-- [x] Student Dashboard with progress tracking
-- [x] AI Tutor chat interface
-- [x] Task submission form
-- [x] Reward Shop with redemption
-- [x] Points History view
-- [x] Parent Dashboard with alerts
-- [x] Task Approval interface with rating & points
-- [x] Manage Rewards page
-- [x] Manage Kids page
+### Gamification
+- [x] Study Timer (Pomodoro-style)
+- [x] Typing Practice
+- [x] Leaderboard
+- [x] Badges system
+- [x] Weekly Challenges
+- [x] Study Streaks
 
-### Design
-- Fredoka font for headings
-- Nunito font for body text
-- Kid-friendly color scheme (Indigo, Amber, Emerald)
-- Playful card-based layout
-- Smooth animations and transitions
-
-## Prioritized Backlog
-
-### P0 (Critical) - Completed
-- All core features implemented
-
-### P1 (Important) - Future Enhancements
-- [ ] Parent can set custom point values for subjects
-- [ ] Weekly/monthly progress reports
-- [ ] Achievement badges for milestones
-- [ ] Push notifications for task approvals
-
-### P2 (Nice to Have)
-- [ ] Multiple language support (Afrikaans UI)
-- [ ] Export progress reports as PDF
-- [ ] Integration with school calendar
-- [ ] Parental controls for AI chat topics
+### Frontend Pages
+- Landing Page (public)
+- Registration & Login pages
+- Family Dashboard (with upgrade option)
+- Student Dashboard
+- Parent Dashboard
+- AI Tutor
+- Task Submission
+- Reward Shop
+- Points History
+- Study Timer, Typing Practice, Badges, Leaderboard
 
 ## Technical Architecture
 - **Frontend**: React 19, Tailwind CSS, Shadcn/UI, React Router
 - **Backend**: FastAPI, Motor (async MongoDB driver)
 - **Database**: MongoDB
 - **AI**: OpenAI GPT-5.2 via Emergent Integrations Library
-- **Authentication**: PIN-based (stored in MongoDB)
-
-## Default Credentials
-- Parent PIN: 1234
-- Student PINs: Set by parent when adding kids
+- **Payments**: Stripe via emergentintegrations library
+- **Authentication**: Email/password with SHA256 hashing
 
 ## Environment Variables
 - `MONGO_URL`: MongoDB connection string
 - `DB_NAME`: Database name
 - `EMERGENT_LLM_KEY`: AI API key for homework helper
+- `STRIPE_API_KEY`: Stripe test API key
 - `REACT_APP_BACKEND_URL`: Backend API URL
+
+## API Endpoints
+### Auth
+- `POST /api/auth/register` - Create family account
+- `POST /api/auth/login` - Login to family account
+- `GET /api/auth/family/{id}` - Get family info
+
+### Subscription
+- `GET /api/subscription/status/{family_id}` - Get subscription status
+- `POST /api/subscription/checkout` - Create Stripe checkout session
+- `GET /api/subscription/status/check/{session_id}` - Verify payment
+
+## Test Credentials
+- Email: test_agent@test.com
+- Password: TestPass123
+
+## Prioritized Backlog
+
+### P1 (Important)
+- [ ] Banner ads for free tier users
+- [ ] Parent can set custom point values
+- [ ] Weekly/monthly progress reports
+
+### P2 (Nice to Have)
+- [ ] Face ID/Fingerprint login (WebAuthn)
+- [ ] Multiple language support (Afrikaans UI)
+- [ ] Export progress reports as PDF
+- [ ] Backend code refactoring (split server.py)
+
+## Last Updated
+February 11, 2026 - Fixed login bug, completed Stripe payment flow
