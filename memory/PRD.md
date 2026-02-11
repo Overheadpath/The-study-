@@ -1,41 +1,69 @@
 # Study Helper - Product Requirements Document
 
 ## Original Problem Statement
-Build a Study Helper app with rewards system for South African CAPS curriculum students (Grade 4 and Grade 7). The app helps students with homework using AI, allows parents to approve completed tasks and award points, and students can redeem points for rewards like Pokemon booster packs.
+Build a Study Helper app with rewards system for children worldwide. The app helps students with homework using AI, allows parents to approve completed tasks and award points, and students can redeem points for rewards like Pokemon booster packs.
 
 ## User Personas
-1. **Student (Grade 4-9)**: Primary user who submits homework, gets AI help, earns points, and redeems rewards
+1. **Student (Any Grade)**: Primary user who submits homework, gets AI help, earns points, and redeems rewards
 2. **Parent/Au Pair**: Supervisor who approves tasks, awards points, manages kids and rewards
 
-## SaaS Model (Implemented Feb 2026)
-The app has been pivoted to a multi-tenant SaaS model:
+## SaaS Model
+The app is a multi-tenant SaaS platform:
 
 ### Free Tier
 - 1 child profile
 - 5 AI questions per day
 - Non-intrusive banner ads
 
-### Premium Tier (R20/month ~ $1.10 USD)
+### Premium Tier ($1/month)
 - Unlimited child profiles
 - Unlimited AI questions
 - Ad-free experience
 
+## PWA (Progressive Web App) - NEW
+The app is now installable as a PWA:
+- **iOS & Android**: Add to Home Screen from Safari/Chrome
+- **Windows & Mac**: Install from Chrome/Edge
+- Works offline (cached resources)
+- Push notifications ready
+- App icons in all sizes (72x72 to 512x512)
+
+## Global Curriculum Support - NEW
+Supports 11 different education curriculums worldwide:
+1. 🇿🇦 **CAPS** - South Africa (Grade 1-12)
+2. 🇺🇸 **Common Core** - United States (K-12)
+3. 🇬🇧 **National Curriculum** - United Kingdom (Year 1-13)
+4. 🇦🇺 **Australian Curriculum** - Australia (Foundation-Year 12)
+5. 🇮🇳 **CBSE** - India (Class 1-12)
+6. 🌍 **Cambridge International** - International (Primary-A Level)
+7. 🌍 **IB Programme** - International (PYP, MYP, DP)
+8. 🇨🇦 **Canadian Curriculum** - Canada (K-12)
+9. 🇩🇪 **German System** - Germany (Klasse 1-13)
+10. 🇫🇷 **French Curriculum** - France (CP-Terminale)
+11. 🌐 **Other/General** - Worldwide (All levels)
+
 ## What's Been Implemented
 
 ### Authentication & User Management
-- [x] Email/password registration for families
-- [x] JWT-less session management (localStorage)
+- [x] Email/password registration (2-step flow)
+- [x] Curriculum selection during registration
+- [x] Session management (localStorage)
 - [x] SHA256 password hashing
-- [x] Family accounts with subscription tracking
 
 ### Stripe Payment Integration
 - [x] Stripe Checkout for premium subscription
 - [x] Payment verification on success callback
 - [x] 30-day premium subscription activation
-- [x] Transaction logging in database
+
+### PWA Features
+- [x] Web App Manifest (/manifest.json)
+- [x] Service Worker (/service-worker.js)
+- [x] App icons (all sizes)
+- [x] Install prompt component
+- [x] Offline caching
 
 ### Core Features
-- [x] AI Homework Helper (CAPS curriculum, Socratic method)
+- [x] AI Homework Helper (adapts to selected curriculum)
 - [x] Task submission with image uploads
 - [x] Task approval workflow with points and ratings
 - [x] Reward shop with point redemption
@@ -50,8 +78,9 @@ The app has been pivoted to a multi-tenant SaaS model:
 - [x] Study Streaks
 
 ### Frontend Pages
-- Landing Page (public)
-- Registration & Login pages
+- Landing Page (global, PWA download CTA)
+- Registration (2-step with curriculum selection)
+- Login
 - Family Dashboard (with upgrade option)
 - Student Dashboard
 - Parent Dashboard
@@ -67,7 +96,7 @@ The app has been pivoted to a multi-tenant SaaS model:
 - **Database**: MongoDB
 - **AI**: OpenAI GPT-5.2 via Emergent Integrations Library
 - **Payments**: Stripe via emergentintegrations library
-- **Authentication**: Email/password with SHA256 hashing
+- **PWA**: Service Worker, Web App Manifest
 
 ## Environment Variables
 - `MONGO_URL`: MongoDB connection string
@@ -78,8 +107,8 @@ The app has been pivoted to a multi-tenant SaaS model:
 
 ## API Endpoints
 ### Auth
-- `POST /api/auth/register` - Create family account
-- `POST /api/auth/login` - Login to family account
+- `POST /api/auth/register` - Create family account with curriculum
+- `POST /api/auth/login` - Login to family account (returns curriculum)
 - `GET /api/auth/family/{id}` - Get family info
 
 ### Subscription
@@ -100,9 +129,10 @@ The app has been pivoted to a multi-tenant SaaS model:
 
 ### P2 (Nice to Have)
 - [ ] Face ID/Fingerprint login (WebAuthn)
-- [ ] Multiple language support (Afrikaans UI)
+- [ ] Multiple language support (Afrikaans, Hindi, etc.)
 - [ ] Export progress reports as PDF
 - [ ] Backend code refactoring (split server.py)
+- [ ] Push notifications for task approvals
 
 ## Last Updated
-February 11, 2026 - Fixed login bug, completed Stripe payment flow
+February 11, 2026 - Added PWA support and global curriculum selection
