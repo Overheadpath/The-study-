@@ -727,6 +727,475 @@ async def get_parent_stats():
         "total_pending_redemptions": len(pending_redemptions)
     }
 
+# ============ BADGE DEFINITIONS ============
+
+BADGE_TIERS = {
+    1: {"name": "Bronze", "tasks_required": 5, "points_bonus": 10},
+    2: {"name": "Silver", "tasks_required": 15, "points_bonus": 25},
+    3: {"name": "Gold", "tasks_required": 30, "points_bonus": 50},
+    4: {"name": "Master", "tasks_required": 50, "points_bonus": 100}  # + 10 booster packs worth
+}
+
+BADGE_TYPES = {
+    "Mathematics": "maths_master",
+    "English": "english_expert",
+    "Afrikaans": "afrikaans_ace",
+    "Natural Sciences": "science_star",
+    "Social Sciences": "social_scholar",
+    "Life Skills": "life_skills_legend",
+    "Life Orientation": "life_skills_legend",
+    "Technology": "tech_titan",
+    "Creative Arts": "creative_champion",
+    "Economic and Management Sciences": "business_brain"
+}
+
+# ============ STUDY TIMER ROUTES ============
+
+@api_router.post("/study/session")
+async def create_study_session(data: StudySessionCreate):
+    """Record a completed study session"""
+    kid = await db.kids.find_one({"id": data.kid_id}, {"_id": 0})
+    if not kid:
+        raise HTTPException(status_code=404, detail="Kid not found")
+    
+    # Calculate points: 1 point per 5 minutes studied
+    base_points = data.actual_minutes // 5
+    
+    # Bonus for meeting goal
+    goal_bonus = 5 if data.actual_minutes >= data.goal_minutes else 0
+    
+    # Check streak bonus
+    streak = await db.streaks.find_one({"kid_id": data.kid_id}, {"_id": 0})
+    streak_bonus = 0
+    if streak and streak.get("current_streak", 0) > 0:
+        # Small streak bonus: 1 extra point per streak day (max 5)
+        streak_bonus = min(streak.get("current_streak", 0), 5)
+    
+    total_points = base_points + goal_bonus + streak_bonus
+    
+    session = StudySession(
+        kid_id=data.kid_id,
+        subject=data.subject,
+        goal_minutes=data.goal_minutes,
+        actual_minutes=data.actual_minutes,
+        points_earned=total_points,
+        completed=data.actual_minutes >= data.goal_minutes
+    )
+    
+    await db.study_sessions.insert_one(serialize_doc(session.model_dump()))
+    
+    # Update kid's points
+    await db.kids.update_one(
+        {"id": data.kid_id},
+        {"$inc": {"points": total_points}}
+    )
+    
+    # Add to points history
+    history = PointsHistory(
+        kid_id=data.kid_id,
+        amount=total_points,
+        reason=f"Study session: {data.actual_minutes}min {data.subject}"
+    )
+    await db.points_history.insert_one(serialize_doc(history.model_dump()))
+    
+    # Update streak
+    await update_streak(data.kid_id)
+    
+    return {
+        "session": session,
+        "points_earned": total_points,
+        "breakdown": {
+            "base": base_points,
+            "goal_bonus": goal_bonus,
+            "streak_bonus": streak_bonus
+        }
+    }
+
+@api_router.get("/study/sessions/{kid_id}")
+async def get_study_sessions(kid_id: str, limit: int = 20):
+    """Get study sessions for a kid"""
+    sessions = await db.study_sessions.find(
+        {"kid_id": kid_id},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(limit).to_list(limit)
+    return sessions
+
+# ============ STREAK ROUTES ============
+
+async def update_streak(kid_id: str):
+    """Update study streak for a kid"""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    streak = await db.streaks.find_one({"kid_id": kid_id}, {"_id": 0})
+    
+    if not streak:
+        # Create new streak
+        new_streak = StudyStreak(
+            kid_id=kid_id,
+            current_streak=1,
+            longest_streak=1,
+            last_study_date=today
+        )
+        await db.streaks.insert_one(serialize_doc(new_streak.model_dump()))
+        return new_streak
+    
+    last_date = streak.get("last_study_date")
+    
+    if last_date == today:
+        # Already studied today
+        return streak
+    
+    # Check if yesterday
+    yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+    
+    if last_date == yesterday:
+        # Continue streak
+        new_current = streak.get("current_streak", 0) + 1
+        new_longest = max(new_current, streak.get("longest_streak", 0))
+        
+        await db.streaks.update_one(
+            {"kid_id": kid_id},
+            {"$set": {
+                "current_streak": new_current,
+                "longest_streak": new_longest,
+                "last_study_date": today
+            }}
+        )
+    else:
+        # Streak broken, start fresh
+        await db.streaks.update_one(
+            {"kid_id": kid_id},
+            {"$set": {
+                "current_streak": 1,
+                "last_study_date": today
+            }}
+        )
+    
+    return await db.streaks.find_one({"kid_id": kid_id}, {"_id": 0})
+
+@api_router.get("/streak/{kid_id}")
+async def get_streak(kid_id: str):
+    """Get streak for a kid"""
+    streak = await db.streaks.find_one({"kid_id": kid_id}, {"_id": 0})
+    if not streak:
+        return {"current_streak": 0, "longest_streak": 0, "last_study_date": None}
+    return streak
+
+# ============ BADGE ROUTES ============
+
+async def check_and_award_badges(kid_id: str, subject: str):
+    """Check if kid earned a new badge tier"""
+    badge_type = BADGE_TYPES.get(subject)
+    if not badge_type:
+        return None
+    
+    # Count approved tasks in this subject
+    task_count = await db.tasks.count_documents({
+        "kid_id": kid_id,
+        "subject": subject,
+        "status": "approved"
+    })
+    
+    # Get current badge
+    badge = await db.badges.find_one({
+        "kid_id": kid_id,
+        "badge_type": badge_type
+    }, {"_id": 0})
+    
+    current_tier = badge.get("tier", 0) if badge else 0
+    
+    # Check for tier upgrade
+    new_tier = 0
+    for tier, requirements in BADGE_TIERS.items():
+        if task_count >= requirements["tasks_required"]:
+            new_tier = tier
+    
+    if new_tier > current_tier:
+        # Award new badge tier!
+        if badge:
+            await db.badges.update_one(
+                {"kid_id": kid_id, "badge_type": badge_type},
+                {"$set": {
+                    "tier": new_tier,
+                    "tasks_completed": task_count,
+                    "earned_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+        else:
+            new_badge = Badge(
+                kid_id=kid_id,
+                badge_type=badge_type,
+                tier=new_tier,
+                tasks_completed=task_count
+            )
+            await db.badges.insert_one(serialize_doc(new_badge.model_dump()))
+        
+        # Award bonus points
+        bonus = BADGE_TIERS[new_tier]["points_bonus"]
+        await db.kids.update_one(
+            {"id": kid_id},
+            {"$inc": {"points": bonus}}
+        )
+        
+        # Add to history
+        tier_name = BADGE_TIERS[new_tier]["name"]
+        history = PointsHistory(
+            kid_id=kid_id,
+            amount=bonus,
+            reason=f"Badge earned: {tier_name} {badge_type.replace('_', ' ').title()}"
+        )
+        await db.points_history.insert_one(serialize_doc(history.model_dump()))
+        
+        return {"badge_type": badge_type, "new_tier": new_tier, "tier_name": tier_name, "bonus": bonus}
+    
+    return None
+
+@api_router.get("/badges/{kid_id}")
+async def get_badges(kid_id: str):
+    """Get all badges for a kid"""
+    badges = await db.badges.find({"kid_id": kid_id}, {"_id": 0}).to_list(100)
+    return {"badges": badges, "badge_tiers": BADGE_TIERS, "badge_types": BADGE_TYPES}
+
+# ============ WEEKLY CHALLENGES ============
+
+@api_router.post("/challenges")
+async def create_challenge(data: WeeklyChallengeCreate):
+    """Create a weekly challenge (parent action)"""
+    challenge = WeeklyChallenge(**data.model_dump())
+    await db.challenges.insert_one(serialize_doc(challenge.model_dump()))
+    return challenge
+
+@api_router.get("/challenges")
+async def get_challenges(kid_id: Optional[str] = None, active_only: bool = True):
+    """Get challenges"""
+    query = {}
+    if active_only:
+        query["status"] = "active"
+    
+    challenges = await db.challenges.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    # Filter for specific kid or all-kids challenges
+    if kid_id:
+        challenges = [c for c in challenges if c.get("target_kid_id") is None or c.get("target_kid_id") == kid_id]
+    
+    return challenges
+
+@api_router.post("/challenges/{challenge_id}/complete")
+async def complete_challenge(challenge_id: str, kid_id: str):
+    """Mark a challenge as completed by a kid"""
+    challenge = await db.challenges.find_one({"id": challenge_id}, {"_id": 0})
+    if not challenge:
+        raise HTTPException(status_code=404, detail="Challenge not found")
+    
+    if kid_id in challenge.get("completed_by", []):
+        raise HTTPException(status_code=400, detail="Already completed this challenge")
+    
+    # Add kid to completed list
+    await db.challenges.update_one(
+        {"id": challenge_id},
+        {"$push": {"completed_by": kid_id}}
+    )
+    
+    # Award points
+    points = challenge.get("points_reward", 0)
+    await db.kids.update_one(
+        {"id": kid_id},
+        {"$inc": {"points": points}}
+    )
+    
+    # Add to history
+    history = PointsHistory(
+        kid_id=kid_id,
+        amount=points,
+        reason=f"Challenge completed: {challenge['title']}"
+    )
+    await db.points_history.insert_one(serialize_doc(history.model_dump()))
+    
+    return {"message": "Challenge completed!", "points_earned": points}
+
+@api_router.delete("/challenges/{challenge_id}")
+async def delete_challenge(challenge_id: str):
+    """Delete a challenge"""
+    await db.challenges.delete_one({"id": challenge_id})
+    return {"message": "Challenge deleted"}
+
+# ============ TYPING PRACTICE ============
+
+TYPING_TEXTS = [
+    "The quick brown fox jumps over the lazy dog.",
+    "Pack my box with five dozen liquor jugs.",
+    "How vexingly quick daft zebras jump!",
+    "The five boxing wizards jump quickly.",
+    "Sphinx of black quartz, judge my vow.",
+    "Two driven jocks help fax my big quiz.",
+    "The jay, pig, fox, zebra and my wolves quack!",
+    "Sympathizing would fix Quaker objectives.",
+    "A wizard's job is to vex chumps quickly in fog.",
+    "Watch Jeopardy, Alex Trebek's fun TV quiz game."
+]
+
+@api_router.get("/typing/text")
+async def get_typing_text():
+    """Get a random typing practice text"""
+    import random
+    return {"text": random.choice(TYPING_TEXTS)}
+
+@api_router.post("/typing/session")
+async def create_typing_session(data: TypingSessionCreate):
+    """Record a typing session"""
+    kid = await db.kids.find_one({"id": data.kid_id}, {"_id": 0})
+    if not kid:
+        raise HTTPException(status_code=404, detail="Kid not found")
+    
+    # Calculate points: Based on WPM and accuracy
+    # Base: 1 point per 10 WPM
+    # Accuracy bonus: +50% if accuracy > 95%, +25% if > 90%
+    base_points = data.wpm // 10
+    
+    accuracy_multiplier = 1.0
+    if data.accuracy >= 95:
+        accuracy_multiplier = 1.5
+    elif data.accuracy >= 90:
+        accuracy_multiplier = 1.25
+    
+    total_points = int(base_points * accuracy_multiplier)
+    
+    session = TypingSession(
+        kid_id=data.kid_id,
+        wpm=data.wpm,
+        accuracy=data.accuracy,
+        duration_seconds=data.duration_seconds,
+        points_earned=total_points
+    )
+    
+    await db.typing_sessions.insert_one(serialize_doc(session.model_dump()))
+    
+    # Update kid's points
+    if total_points > 0:
+        await db.kids.update_one(
+            {"id": data.kid_id},
+            {"$inc": {"points": total_points}}
+        )
+        
+        history = PointsHistory(
+            kid_id=data.kid_id,
+            amount=total_points,
+            reason=f"Typing practice: {data.wpm} WPM, {data.accuracy:.0f}% accuracy"
+        )
+        await db.points_history.insert_one(serialize_doc(history.model_dump()))
+    
+    # Update streak
+    await update_streak(data.kid_id)
+    
+    return {"session": session, "points_earned": total_points}
+
+@api_router.get("/typing/stats/{kid_id}")
+async def get_typing_stats(kid_id: str):
+    """Get typing stats for a kid"""
+    sessions = await db.typing_sessions.find(
+        {"kid_id": kid_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    if not sessions:
+        return {"best_wpm": 0, "avg_wpm": 0, "avg_accuracy": 0, "total_sessions": 0}
+    
+    best_wpm = max(s.get("wpm", 0) for s in sessions)
+    avg_wpm = sum(s.get("wpm", 0) for s in sessions) // len(sessions)
+    avg_accuracy = sum(s.get("accuracy", 0) for s in sessions) / len(sessions)
+    
+    return {
+        "best_wpm": best_wpm,
+        "avg_wpm": avg_wpm,
+        "avg_accuracy": round(avg_accuracy, 1),
+        "total_sessions": len(sessions),
+        "recent_sessions": sessions[:10]
+    }
+
+# ============ LEADERBOARD ============
+
+@api_router.get("/leaderboard")
+async def get_leaderboard():
+    """Get leaderboard of all kids"""
+    kids = await db.kids.find({}, {"_id": 0}).to_list(100)
+    
+    leaderboard = []
+    for kid in kids:
+        # Get stats
+        tasks_completed = await db.tasks.count_documents({"kid_id": kid["id"], "status": "approved"})
+        streak_data = await db.streaks.find_one({"kid_id": kid["id"]}, {"_id": 0})
+        badges = await db.badges.find({"kid_id": kid["id"]}, {"_id": 0}).to_list(100)
+        typing_stats = await db.typing_sessions.find({"kid_id": kid["id"]}, {"_id": 0}).to_list(1)
+        
+        best_wpm = 0
+        if typing_stats:
+            all_typing = await db.typing_sessions.find({"kid_id": kid["id"]}, {"_id": 0}).to_list(100)
+            best_wpm = max((s.get("wpm", 0) for s in all_typing), default=0)
+        
+        leaderboard.append({
+            "id": kid["id"],
+            "name": kid["name"],
+            "grade": kid["grade"],
+            "avatar_color": kid.get("avatar_color", "#4F46E5"),
+            "points": kid.get("points", 0),
+            "tasks_completed": tasks_completed,
+            "current_streak": streak_data.get("current_streak", 0) if streak_data else 0,
+            "badges_count": len(badges),
+            "best_wpm": best_wpm
+        })
+    
+    # Sort by points
+    leaderboard.sort(key=lambda x: x["points"], reverse=True)
+    
+    return leaderboard
+
+# ============ AI POINT ESTIMATION ============
+
+@api_router.post("/tasks/estimate-points", response_model=TaskPointEstimate)
+async def estimate_task_points(data: TaskCreate):
+    """AI estimates points for a task before submission"""
+    kid = await db.kids.find_one({"id": data.kid_id}, {"_id": 0})
+    if not kid:
+        raise HTTPException(status_code=404, detail="Kid not found")
+    
+    try:
+        system_message = """You are a homework evaluation assistant. Based on the task description, estimate how many points (1-30) this homework submission deserves. Consider:
+- Complexity of the task
+- Level of detail in the description
+- Evidence of understanding/learning
+- Effort shown
+
+Respond ONLY with a JSON object like: {"points": 15, "reasoning": "Brief reason"}
+No other text."""
+
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"point-estimate-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+            system_message=system_message
+        ).with_model("openai", "gpt-5.2")
+        
+        prompt = f"""Task: {data.title}
+Subject: {data.subject}
+Description: {data.description}
+Grade: {kid['grade']}"""
+        
+        response = await chat.send_message(UserMessage(text=prompt))
+        
+        # Parse JSON response
+        import json
+        try:
+            result = json.loads(response)
+            return TaskPointEstimate(
+                estimated_points=min(max(result.get("points", 10), 1), 30),
+                reasoning=result.get("reasoning", "Based on task complexity")
+            )
+        except:
+            return TaskPointEstimate(estimated_points=10, reasoning="Standard task submission")
+            
+    except Exception as e:
+        logging.error(f"Estimation error: {e}")
+        return TaskPointEstimate(estimated_points=10, reasoning="Standard task submission")
+
 # Include the router in the main app
 app.include_router(api_router)
 
