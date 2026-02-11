@@ -61,19 +61,26 @@ const LoginPage = ({ onLogin, onKidLogin }) => {
             <span className="font-bold text-2xl text-gray-800 font-heading">Study Helper</span>
           </Link>
           <h1 className="text-2xl font-bold text-gray-800 font-heading">Welcome Back</h1>
-          <p className="text-gray-500">Log in with your account</p>
+          <p className="text-gray-500">Parents & Students log in here</p>
         </div>
 
         {/* Info badges */}
-        <div className="flex justify-center gap-3 mb-6">
-          <div className="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-full text-sm text-indigo-600">
+        <div className="flex justify-center gap-3 mb-4">
+          <div className="flex items-center gap-2 bg-indigo-100 px-4 py-2 rounded-full text-sm text-indigo-700 font-medium">
             <Users className="w-4 h-4" />
             <span>Parents</span>
           </div>
-          <div className="flex items-center gap-2 bg-purple-50 px-3 py-1.5 rounded-full text-sm text-purple-600">
+          <div className="flex items-center gap-2 bg-purple-100 px-4 py-2 rounded-full text-sm text-purple-700 font-medium">
             <User className="w-4 h-4" />
-            <span>Students</span>
+            <span>Kids</span>
           </div>
+        </div>
+        
+        {/* Kid login hint */}
+        <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-3 mb-6 border border-purple-200">
+          <p className="text-xs text-purple-700 text-center">
+            <strong>🎒 Kids:</strong> Use the email your parent set up for you to log in directly to your dashboard!
+          </p>
         </div>
 
         {/* Form */}
