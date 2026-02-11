@@ -473,10 +473,33 @@ async def register_family(data: FamilyRegister):
         kids_count=0
     )
 
-@api_router.post("/auth/login", response_model=FamilyResponse)
-async def login_family(data: FamilyLogin):
-    """Login to family account"""
-    family = await db.families.find_one({"email": data.email.lower()}, {"_id": 0})
+@api_router.post("/auth/login")
+async def login_user(data: FamilyLogin):
+    """Login for both parents and kids"""
+    email_lower = data.email.lower()
+    
+    # First check if it's a kid's email
+    kid = await db.kids.find_one({"email": email_lower}, {"_id": 0})
+    if kid and kid.get("password_hash"):
+        if verify_password(data.password, kid.get("password_hash", "")):
+            # Kid login successful
+            return {
+                "user_type": "kid",
+                "kid": {
+                    "id": kid["id"],
+                    "kid_id": kid["id"],
+                    "name": kid["name"],
+                    "email": kid.get("email", ""),
+                    "grade": kid["grade"],
+                    "points": kid.get("points", 0),
+                    "avatar_color": kid.get("avatar_color", "#4F46E5"),
+                    "family_id": kid.get("family_id", ""),
+                    "user_type": "kid"
+                }
+            }
+    
+    # Check parent/family login
+    family = await db.families.find_one({"email": email_lower}, {"_id": 0})
     if not family:
         raise HTTPException(status_code=401, detail="Invalid email or password")
     
@@ -489,16 +512,19 @@ async def login_family(data: FamilyLogin):
     # Count kids
     kids_count = await db.kids.count_documents({"family_id": family["id"]})
     
-    return FamilyResponse(
-        id=family["id"],
-        email=family["email"],
-        family_name=family.get("family_name", "My Family"),
-        curriculum=family.get("curriculum", "caps"),
-        is_premium=admin or family.get("is_premium", False),
-        is_admin=admin,
-        premium_expires=None if admin else family.get("premium_expires"),
-        kids_count=kids_count
-    )
+    return {
+        "user_type": "parent",
+        "family": {
+            "id": family["id"],
+            "email": family["email"],
+            "family_name": family.get("family_name", "My Family"),
+            "curriculum": family.get("curriculum", "caps"),
+            "is_premium": admin or family.get("is_premium", False),
+            "is_admin": admin,
+            "premium_expires": None if admin else family.get("premium_expires"),
+            "kids_count": kids_count
+        }
+    }
 
 @api_router.get("/auth/family/{family_id}", response_model=FamilyResponse)
 async def get_family(family_id: str):
