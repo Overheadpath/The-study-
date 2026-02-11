@@ -274,6 +274,24 @@ class FamilyResponse(BaseModel):
     premium_expires: Optional[str] = None
     kids_count: int = 0
 
+class KidLoginResponse(BaseModel):
+    """Response for kid login - limited access"""
+    id: str
+    kid_id: str
+    name: str
+    email: str
+    grade: int
+    points: int
+    avatar_color: str
+    family_id: str
+    user_type: str = "kid"  # Always "kid" for this response
+
+class LoginResponse(BaseModel):
+    """Unified login response"""
+    user_type: str  # "parent" or "kid"
+    family: Optional[FamilyResponse] = None
+    kid: Optional[KidLoginResponse] = None
+
 class PaymentTransaction(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
