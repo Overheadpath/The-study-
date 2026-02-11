@@ -31,6 +31,15 @@ STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY')
 # Subscription pricing (in USD - R20 ZAR ≈ $1.10 USD)
 SUBSCRIPTION_PRICE = 1.10
 
+# Admin emails - these get free premium access
+ADMIN_EMAILS = [
+    "colin.starwars.gg@gmail.com",
+]
+
+def is_admin_email(email: str) -> bool:
+    """Check if email is an admin email (case-insensitive)"""
+    return email.lower() in [e.lower() for e in ADMIN_EMAILS]
+
 # Create the main app
 app = FastAPI()
 
