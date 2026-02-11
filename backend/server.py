@@ -936,11 +936,36 @@ async def chat_with_ai(data: ChatRequest):
     if not kid:
         raise HTTPException(status_code=404, detail="Kid not found")
     
-    # Build system message based on kid's grade and subject
+    # Get family info for curriculum
+    family = None
+    curriculum_name = "general education standards"
+    curriculum_id = "other"
+    if kid.get("family_id"):
+        family = await db.families.find_one({"id": kid["family_id"]}, {"_id": 0})
+        if family:
+            curriculum_id = family.get("curriculum", "other")
+    
+    # Curriculum display names
+    curriculum_names = {
+        "caps": "South African CAPS curriculum",
+        "common_core": "US Common Core standards",
+        "uk_national": "UK National Curriculum",
+        "australian": "Australian Curriculum",
+        "cbse": "Indian CBSE curriculum",
+        "cambridge": "Cambridge International curriculum",
+        "ib": "International Baccalaureate (IB) programme",
+        "canadian": "Canadian provincial standards",
+        "german": "German educational standards",
+        "french": "French national curriculum",
+        "other": "general education standards"
+    }
+    curriculum_name = curriculum_names.get(curriculum_id, "general education standards")
+    
+    # Build system message based on kid's grade and curriculum
     grade_text = f"Grade {kid['grade']}"
     subject_text = f" about {data.subject}" if data.subject else ""
     
-    system_message = f"""You are a friendly, encouraging homework helper for {kid['name']}, a {grade_text} student in South Africa following the CAPS curriculum at St George's Grammar School.
+    system_message = f"""You are a friendly, encouraging homework helper for {kid['name']}, a {grade_text} student following the {curriculum_name}.
 
 IMPORTANT RULES - YOU MUST FOLLOW THESE:
 1. NEVER give direct answers to homework problems
@@ -957,8 +982,10 @@ Your teaching approach:
 - Use "What happens if we try...?"
 - Encourage with "You're on the right track!"
 - For Maths: Teach the METHOD, let them do the calculation
-- For Afrikaans: Help them understand grammar rules, don't translate for them
+- For language subjects: Help them understand grammar rules and vocabulary, don't do it for them
 - For essays/writing: Ask guiding questions, don't write for them
+
+Adapt your examples and context to be relevant to the student's curriculum ({curriculum_name}).
 
 If they ask you to just give the answer, kindly explain that you're here to help them LEARN, and learning means figuring things out with guidance.
 
