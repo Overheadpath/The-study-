@@ -400,3 +400,27 @@ h1, h2, h3, h4, h5, h6 {
 .font-body {
   font-family: 'Nunito', sans-serif;
 }
+
+/* Text Selection Styling - Make selected text readable */
+::selection {
+  background-color: #6366F1;
+  color: #FFFFFF;
+}
+
+::-moz-selection {
+  background-color: #6366F1;
+  color: #FFFFFF;
+}
+
+/* For inputs and textareas */
+input::selection,
+textarea::selection {
+  background-color: #6366F1;
+  color: #FFFFFF;
+}
+
+input::-moz-selection,
+textarea::-moz-selection {
+  background-color: #6366F1;
+  color: #FFFFFF;
+}
