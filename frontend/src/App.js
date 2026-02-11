@@ -138,6 +138,7 @@ export const useAuth = () => {
     mode, 
     isAuthenticated,
     loginFamily, 
+    loginKid,
     selectKid, 
     enterParentMode,
     logout, 
