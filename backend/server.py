@@ -221,6 +221,60 @@ class TaskPointEstimate(BaseModel):
     estimated_points: int
     reasoning: str
 
+# ============ USER & SUBSCRIPTION MODELS ============
+
+class Family(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    email: str
+    password_hash: str
+    family_name: str = "My Family"
+    parent_pin: str = "1234"
+    is_premium: bool = False
+    premium_expires: Optional[str] = None
+    ai_questions_today: int = 0
+    ai_questions_date: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class FamilyRegister(BaseModel):
+    email: str
+    password: str
+    family_name: str
+
+class FamilyLogin(BaseModel):
+    email: str
+    password: str
+
+class FamilyResponse(BaseModel):
+    id: str
+    email: str
+    family_name: str
+    is_premium: bool
+    premium_expires: Optional[str] = None
+    kids_count: int = 0
+
+class PaymentTransaction(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    family_id: str
+    session_id: str
+    amount: float
+    currency: str
+    payment_status: str = "pending"
+    metadata: Dict[str, str] = {}
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class SubscriptionStatus(BaseModel):
+    is_premium: bool
+    expires: Optional[str] = None
+    can_add_child: bool
+    ai_questions_remaining: int
+    max_children: int
+
+# Free tier limits
+FREE_AI_QUESTIONS_PER_DAY = 5
+FREE_MAX_CHILDREN = 1
+
 class Settings(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = "main_settings"
@@ -234,12 +288,14 @@ class SettingsUpdate(BaseModel):
 class PinVerify(BaseModel):
     pin: str
     mode: str  # parent or student
+    family_id: Optional[str] = None
 
 class PinVerifyResponse(BaseModel):
     valid: bool
     mode: str
     kid_id: Optional[str] = None
     kid_name: Optional[str] = None
+    family_id: Optional[str] = None
 
 # ============ HELPER FUNCTIONS ============
 
