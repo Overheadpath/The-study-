@@ -148,6 +148,56 @@ function App() {
               )
             } 
           />
+          <Route 
+            path="/student/timer" 
+            element={
+              auth.isAuthenticated && auth.mode === "student" ? (
+                <StudyTimer auth={auth} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } 
+          />
+          <Route 
+            path="/student/typing" 
+            element={
+              auth.isAuthenticated && auth.mode === "student" ? (
+                <TypingPractice auth={auth} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } 
+          />
+          <Route 
+            path="/student/badges" 
+            element={
+              auth.isAuthenticated && auth.mode === "student" ? (
+                <Badges auth={auth} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } 
+          />
+          <Route 
+            path="/student/challenges" 
+            element={
+              auth.isAuthenticated && auth.mode === "student" ? (
+                <WeeklyChallenges auth={auth} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } 
+          />
+          <Route 
+            path="/leaderboard" 
+            element={
+              auth.isAuthenticated ? (
+                <Leaderboard auth={auth} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } 
+          />
 
           {/* Parent routes */}
           <Route 
