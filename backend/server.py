@@ -55,6 +55,7 @@ class Kid(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class KidCreate(BaseModel):
+    family_id: Optional[str] = None
     name: str
     grade: int
     pin: str
