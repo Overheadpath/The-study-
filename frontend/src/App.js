@@ -24,6 +24,7 @@ import TypingPractice from "@/pages/TypingPractice";
 import Leaderboard from "@/pages/Leaderboard";
 import Badges from "@/pages/Badges";
 import WeeklyChallenges from "@/pages/WeeklyChallenges";
+import PaymentSuccess from "@/pages/PaymentSuccess";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
