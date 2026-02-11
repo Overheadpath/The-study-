@@ -383,6 +383,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      <InstallPrompt />
       <Toaster position="top-center" richColors />
     </div>
   );
