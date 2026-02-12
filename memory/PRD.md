@@ -19,15 +19,18 @@ Multi-tenant SaaS platform:
 - Unlimited AI questions
 - Ad-free experience
 
-### Admin Accounts
-- `Colin.starwars.gg@gmail.com` - Full premium access forever, no payment required
+### Admin Accounts (Free Premium Forever)
+- `colin.starwars.gg@gmail.com`
+- `dean.dhchapman@gmail.com`
+- `colcha@sggs.co.za`
 
 ## PWA (Progressive Web App)
 The app is installable:
 - **iOS & Android**: Add to Home Screen from Safari/Chrome
 - **Windows & Mac**: Install from Chrome/Edge
 - Works offline (cached resources)
-- App icons in all sizes
+- App icons in all sizes (72x72 to 512x512)
+- Service worker for caching
 
 ## Global Curriculum Support
 11 education curriculums:
@@ -47,16 +50,29 @@ The app is installable:
 
 ### Parent Login
 - Register with email/password
-- Select curriculum during registration
+- Select curriculum during 2-step registration
 - Access to Family Dashboard, Parent Dashboard
 - Can manage kids, approve tasks, manage rewards
 
-### Kid Direct Login (NEW)
+### Kid Direct Login
 - Parents set up email/password for each kid
-- Kids log in with their own email
+- Kids log in with their own email at the main login page
 - Goes directly to Student Dashboard
 - Cannot access Parent Dashboard or admin features
-- PIN login still available for shared devices
+
+### Session Persistence
+- Login persists across page refreshes
+- Back button doesn't log you out
+- State saved in localStorage
+
+## Account Sharing System (NEW)
+Allows two parent accounts to share a kid:
+1. Parent 1 tries to add a kid with Parent 2's email
+2. System offers to send a share request
+3. Parent 2 sees notification bell with pending requests
+4. Parent 2 can Approve or Reject
+5. If approved, both parents see the kid's progress
+6. Kid can login directly with their email
 
 ## What's Been Implemented
 
@@ -77,15 +93,23 @@ The app is installable:
 
 ### Authentication
 - [x] Parent email/password login
-- [x] Kid direct email login (NEW)
+- [x] Kid direct email login
 - [x] PIN login for shared devices
 - [x] Admin accounts with free premium
+- [x] Session persistence (localStorage)
+
+### Account Sharing
+- [x] Share request system
+- [x] Notification bell for pending requests
+- [x] Approve/Reject workflow
+- [x] Shared kids visible to both families
 
 ### PWA
 - [x] Web App Manifest
-- [x] Service Worker
-- [x] App icons
+- [x] Service Worker (v2)
+- [x] App icons (all sizes)
 - [x] Install prompt
+- [x] Offline caching
 
 ### Payments
 - [x] Stripe Checkout
@@ -107,8 +131,15 @@ The app is installable:
 - `GET /api/auth/family/{id}` - Get family info
 
 ### Kids
-- `POST /api/kids` - Create kid (with optional email/password)
-- `PUT /api/kids/{id}` - Update kid (can add email/password)
+- `GET /api/kids?family_id=X` - Get kids (includes shared)
+- `POST /api/kids` - Create kid
+- `PUT /api/kids/{id}` - Update kid
+
+### Sharing
+- `POST /api/share/request` - Send share request
+- `GET /api/share/requests/pending` - Get pending requests
+- `POST /api/share/requests/{id}/approve` - Approve request
+- `POST /api/share/requests/{id}/reject` - Reject request
 
 ### Subscription
 - `GET /api/subscription/status/{family_id}`
@@ -118,7 +149,7 @@ The app is installable:
 
 ### P1 (Important)
 - [ ] Password reset functionality
-- [ ] Banner ads for free tier
+- [ ] Email notifications for share requests
 - [ ] Progress reports
 
 ### P2 (Nice to Have)
@@ -128,4 +159,4 @@ The app is installable:
 - [ ] Push notifications
 
 ## Last Updated
-February 11, 2026 - Added kid direct email login, admin system, PWA fixes
+February 12, 2026 - Added session persistence, account sharing system
