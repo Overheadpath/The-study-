@@ -625,7 +625,8 @@ async def login_user(data: FamilyLogin):
             "is_premium": admin or family.get("is_premium", False),
             "is_admin": admin,
             "premium_expires": None if admin else family.get("premium_expires"),
-            "kids_count": kids_count
+            "kids_count": kids_count,
+            "referral_code": family.get("referral_code")
         }
     }
 
