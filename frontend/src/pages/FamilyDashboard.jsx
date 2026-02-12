@@ -90,13 +90,16 @@ const FamilyDashboard = ({ family, onLogout, onSelectKid, onUpdateFamily }) => {
             </div>
           </div>
           
-          <button 
-            onClick={onLogout}
-            className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-            data-testid="logout-btn"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <ShareNotifications familyId={family?.id} />
+            <button 
+              onClick={onLogout}
+              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              data-testid="logout-btn"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </header>
 
