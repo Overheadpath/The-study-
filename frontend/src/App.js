@@ -42,29 +42,26 @@ export const api = axios.create({
 
 // Auth hook
 export const useAuth = () => {
-  const [family, setFamily] = useState(null);
-  const [currentKid, setCurrentKid] = useState(null);
-  const [mode, setMode] = useState(null); // 'parent' or 'student'
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [family, setFamily] = useState(() => {
+    // Initialize from localStorage immediately
+    const saved = localStorage.getItem("studyhelper_family");
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [currentKid, setCurrentKid] = useState(() => {
+    const saved = localStorage.getItem("studyhelper_current_kid");
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [mode, setMode] = useState(() => {
+    return localStorage.getItem("studyhelper_mode") || null;
+  });
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return !!(localStorage.getItem("studyhelper_family") || localStorage.getItem("studyhelper_current_kid"));
+  });
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load saved auth state
-    const savedFamily = localStorage.getItem("studyhelper_family");
-    const savedKid = localStorage.getItem("studyhelper_current_kid");
-    const savedMode = localStorage.getItem("studyhelper_mode");
-    
-    if (savedFamily) {
-      setFamily(JSON.parse(savedFamily));
-      setIsAuthenticated(true);
-    }
-    if (savedKid) {
-      setCurrentKid(JSON.parse(savedKid));
-      setMode("student");
-      setIsAuthenticated(true);
-    }
-    if (savedMode === "parent" && savedFamily) {
-      setMode("parent");
-    }
+    // Quick check to set loading false
+    setIsLoading(false);
   }, []);
 
   const loginFamily = useCallback((familyData) => {
