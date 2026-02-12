@@ -507,24 +507,73 @@ async def register_family(data: FamilyRegister):
     # Check if admin email
     admin = is_admin_email(data.email)
     
+    # Check if referral code is valid
+    referred_by = None
+    referrer_family = None
+    if data.referral_code:
+        referrer_family = await db.families.find_one({"referral_code": data.referral_code.upper()}, {"_id": 0})
+        if referrer_family:
+            referred_by = data.referral_code.upper()
+    
     family = Family(
         email=data.email.lower(),
         password_hash=hash_password(data.password),
         family_name=data.family_name,
         curriculum=data.curriculum,
+        referred_by=referred_by,
         is_premium=admin  # Admins get premium automatically
     )
     
     await db.families.insert_one(serialize_doc(family.model_dump()))
+    
+    # If valid referral, give both families 1 month free premium
+    if referrer_family and not admin:
+        # Give new user 1 month premium
+        premium_expires = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+        await db.families.update_one(
+            {"id": family.id},
+            {"$set": {"is_premium": True, "premium_expires": premium_expires}}
+        )
+        
+        # Give referrer 1 month premium (extend if already premium)
+        referrer_expires = referrer_family.get("premium_expires")
+        if referrer_expires:
+            try:
+                current_expiry = datetime.fromisoformat(referrer_expires.replace('Z', '+00:00'))
+                if current_expiry > datetime.now(timezone.utc):
+                    new_expiry = current_expiry + timedelta(days=30)
+                else:
+                    new_expiry = datetime.now(timezone.utc) + timedelta(days=30)
+            except:
+                new_expiry = datetime.now(timezone.utc) + timedelta(days=30)
+        else:
+            new_expiry = datetime.now(timezone.utc) + timedelta(days=30)
+        
+        await db.families.update_one(
+            {"id": referrer_family["id"]},
+            {"$set": {"is_premium": True, "premium_expires": new_expiry.isoformat()}}
+        )
+        
+        # Record the referral
+        await db.referrals.insert_one({
+            "id": str(uuid.uuid4()),
+            "referrer_family_id": referrer_family["id"],
+            "referral_code": referred_by,
+            "referred_email": data.email.lower(),
+            "referred_family_id": family.id,
+            "status": "rewarded",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
     
     return FamilyResponse(
         id=family.id,
         email=family.email,
         family_name=family.family_name,
         curriculum=family.curriculum,
-        is_premium=admin,
+        is_premium=admin or (referred_by is not None),
         is_admin=admin,
-        kids_count=0
+        kids_count=0,
+        referral_code=family.referral_code
     )
 
 @api_router.post("/auth/login")
