@@ -135,6 +135,7 @@ export const useAuth = () => {
     currentKid, 
     mode, 
     isAuthenticated,
+    isLoading,
     loginFamily, 
     loginKid,
     selectKid, 
@@ -147,6 +148,15 @@ export const useAuth = () => {
 
 function App() {
   const auth = useAuth();
+
+  // Show loading while checking auth state
+  if (auth.isLoading) {
+    return (
+      <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   // Create a combined auth object for backward compatibility
   const legacyAuth = {
