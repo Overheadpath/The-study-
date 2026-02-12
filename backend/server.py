@@ -833,6 +833,145 @@ async def delete_kid(kid_id: str):
         raise HTTPException(status_code=404, detail="Kid not found")
     return {"message": "Kid deleted"}
 
+# ============ KID SHARING ROUTES ============
+
+@api_router.post("/share/request")
+async def create_share_request(data: ShareRequestCreate, family_id: str):
+    """Create a request to share a kid with another account"""
+    # Check if the target email exists as a family account
+    target_family = await db.families.find_one({"email": data.to_email.lower()}, {"_id": 0})
+    
+    if not target_family:
+        raise HTTPException(status_code=404, detail="No account found with that email. They need to register first.")
+    
+    if target_family["id"] == family_id:
+        raise HTTPException(status_code=400, detail="You can't share with yourself")
+    
+    # Check if there's already a pending request
+    existing = await db.share_requests.find_one({
+        "from_family_id": family_id,
+        "to_family_id": target_family["id"],
+        "kid_name": data.kid_name,
+        "status": "pending"
+    }, {"_id": 0})
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="A share request is already pending for this account")
+    
+    # Create share request
+    share_request = ShareRequest(
+        from_family_id=family_id,
+        to_family_id=target_family["id"],
+        to_email=data.to_email.lower(),
+        kid_name=data.kid_name,
+        kid_email=data.kid_email
+    )
+    
+    # Store additional kid data in the request
+    request_data = share_request.model_dump()
+    request_data["kid_grade"] = data.kid_grade
+    request_data["kid_pin"] = data.kid_pin
+    request_data["kid_password"] = data.kid_password
+    request_data["avatar_color"] = data.avatar_color
+    
+    await db.share_requests.insert_one(serialize_doc(request_data))
+    
+    return {"message": f"Share request sent to {data.to_email}", "request_id": share_request.id}
+
+@api_router.get("/share/requests/pending")
+async def get_pending_requests(family_id: str):
+    """Get pending share requests for a family (requests TO this family)"""
+    requests = await db.share_requests.find(
+        {"to_family_id": family_id, "status": "pending"},
+        {"_id": 0}
+    ).to_list(100)
+    
+    # Get requester info for each request
+    for req in requests:
+        from_family = await db.families.find_one({"id": req["from_family_id"]}, {"_id": 0})
+        if from_family:
+            req["from_family_name"] = from_family.get("family_name", "Unknown")
+            req["from_email"] = from_family.get("email", "")
+    
+    return requests
+
+@api_router.get("/share/requests/sent")
+async def get_sent_requests(family_id: str):
+    """Get share requests sent by this family"""
+    requests = await db.share_requests.find(
+        {"from_family_id": family_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    return requests
+
+@api_router.post("/share/requests/{request_id}/approve")
+async def approve_share_request(request_id: str, family_id: str):
+    """Approve a share request and create the shared kid"""
+    request = await db.share_requests.find_one({"id": request_id}, {"_id": 0})
+    
+    if not request:
+        raise HTTPException(status_code=404, detail="Share request not found")
+    
+    if request["to_family_id"] != family_id:
+        raise HTTPException(status_code=403, detail="You can only approve requests sent to you")
+    
+    if request["status"] != "pending":
+        raise HTTPException(status_code=400, detail="This request has already been processed")
+    
+    # Check if kid email already exists
+    if request.get("kid_email"):
+        existing_kid = await db.kids.find_one({"email": request["kid_email"].lower()}, {"_id": 0})
+        existing_family = await db.families.find_one({"email": request["kid_email"].lower()}, {"_id": 0})
+        if existing_kid or existing_family:
+            raise HTTPException(status_code=400, detail="Kid email already registered")
+    
+    # Create the kid with both families having access
+    kid_data = {
+        "id": str(uuid.uuid4()),
+        "family_id": request["from_family_id"],  # Primary owner
+        "shared_with": [request["to_family_id"]],  # Shared with approver
+        "name": request["kid_name"],
+        "grade": request.get("kid_grade", 5),
+        "pin": request.get("kid_pin", "1234"),
+        "points": 0,
+        "avatar_color": request.get("avatar_color", "#4F46E5"),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Add email/password if provided
+    if request.get("kid_email"):
+        kid_data["email"] = request["kid_email"].lower()
+    if request.get("kid_password"):
+        kid_data["password_hash"] = hash_password(request["kid_password"])
+    
+    await db.kids.insert_one(serialize_doc(kid_data))
+    
+    # Update request status
+    await db.share_requests.update_one(
+        {"id": request_id},
+        {"$set": {"status": "approved"}}
+    )
+    
+    return {"message": f"Approved! {request['kid_name']} is now shared between both accounts.", "kid_id": kid_data["id"]}
+
+@api_router.post("/share/requests/{request_id}/reject")
+async def reject_share_request(request_id: str, family_id: str):
+    """Reject a share request"""
+    request = await db.share_requests.find_one({"id": request_id}, {"_id": 0})
+    
+    if not request:
+        raise HTTPException(status_code=404, detail="Share request not found")
+    
+    if request["to_family_id"] != family_id:
+        raise HTTPException(status_code=403, detail="You can only reject requests sent to you")
+    
+    await db.share_requests.update_one(
+        {"id": request_id},
+        {"$set": {"status": "rejected"}}
+    )
+    
+    return {"message": "Share request rejected"}
+
 # ============ TASKS ROUTES ============
 
 @api_router.get("/tasks", response_model=List[Task])
