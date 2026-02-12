@@ -305,14 +305,14 @@ const WeeklyChallenges = ({ auth }) => {
             <div>
               <label className="text-sm font-semibold text-gray-700 mb-1 block">For Who?</label>
               <Select 
-                value={form.target_kid_id} 
-                onValueChange={(value) => setForm({ ...form, target_kid_id: value })}
+                value={form.target_kid_id || "all"} 
+                onValueChange={(value) => setForm({ ...form, target_kid_id: value === "all" ? "" : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Everyone" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Everyone</SelectItem>
+                  <SelectItem value="all">Everyone</SelectItem>
                   {kids.map((kid) => (
                     <SelectItem key={kid.id} value={kid.id}>
                       {kid.name}
