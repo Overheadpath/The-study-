@@ -745,16 +745,26 @@ async def verify_pin(data: PinVerify):
 
 # ============ KIDS ROUTES ============
 
-@api_router.get("/kids", response_model=List[Kid])
+@api_router.get("/kids")
 async def get_kids(family_id: Optional[str] = None):
-    """Get all kids, optionally filtered by family"""
-    query = {}
+    """Get all kids, including shared kids"""
     if family_id:
-        query["family_id"] = family_id
-    kids = await db.kids.find(query, {"_id": 0}).to_list(100)
+        # Get kids owned by this family OR shared with this family
+        kids = await db.kids.find({
+            "$or": [
+                {"family_id": family_id},
+                {"shared_with": family_id}
+            ]
+        }, {"_id": 0}).to_list(100)
+        
+        # Mark which kids are shared (not owned)
+        for kid in kids:
+            kid["is_shared"] = kid.get("family_id") != family_id
+    else:
+        kids = await db.kids.find({}, {"_id": 0}).to_list(100)
     return kids
 
-@api_router.get("/kids/{kid_id}", response_model=Kid)
+@api_router.get("/kids/{kid_id}")
 async def get_kid(kid_id: str):
     """Get a specific kid"""
     kid = await db.kids.find_one({"id": kid_id}, {"_id": 0})
