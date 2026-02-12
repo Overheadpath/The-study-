@@ -57,7 +57,8 @@ async def root():
 class Kid(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    family_id: Optional[str] = None  # Links kid to a family account
+    family_id: Optional[str] = None  # Primary family that owns this kid
+    shared_with: List[str] = []  # List of family_ids that can also see this kid
     name: str
     grade: int
     pin: str
@@ -84,6 +85,27 @@ class KidUpdate(BaseModel):
     pin: Optional[str] = None
     avatar_color: Optional[str] = None
     points: Optional[int] = None
+
+# Share request for linking kids between accounts
+class ShareRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    from_family_id: str  # Family requesting to share
+    to_family_id: str  # Family being asked to share
+    to_email: str  # Email of the account being asked
+    kid_name: str  # Name of kid to share
+    kid_email: Optional[str] = None  # Email for the kid
+    status: str = "pending"  # pending, approved, rejected
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ShareRequestCreate(BaseModel):
+    to_email: str  # Email of account to share with
+    kid_name: str
+    kid_grade: int
+    kid_pin: str
+    kid_email: Optional[str] = None
+    kid_password: Optional[str] = None
+    avatar_color: Optional[str] = "#4F46E5"
 
 class Task(BaseModel):
     model_config = ConfigDict(extra="ignore")
