@@ -85,16 +85,24 @@ export const useAuth = () => {
     setCurrentKid(kid);
     setMode("student");
     setIsAuthenticated(true);
-    localStorage.setItem("studyhelper_current_kid", JSON.stringify(kid));
-    localStorage.setItem("studyhelper_mode", "student");
+    try {
+      localStorage.setItem("studyhelper_current_kid", JSON.stringify(kid));
+      localStorage.setItem("studyhelper_mode", "student");
+    } catch (e) {
+      console.error("Error saving kid to localStorage:", e);
+    }
   }, []);
 
   const enterParentMode = useCallback(() => {
     setMode("parent");
     setIsAuthenticated(true);
     setCurrentKid(null);
-    localStorage.setItem("studyhelper_mode", "parent");
-    localStorage.removeItem("studyhelper_current_kid");
+    try {
+      localStorage.setItem("studyhelper_mode", "parent");
+      localStorage.removeItem("studyhelper_current_kid");
+    } catch (e) {
+      console.error("Error saving mode to localStorage:", e);
+    }
   }, []);
 
   const logout = useCallback(() => {
@@ -102,18 +110,26 @@ export const useAuth = () => {
     setCurrentKid(null);
     setMode(null);
     setIsAuthenticated(false);
-    localStorage.removeItem("studyhelper_family");
-    localStorage.removeItem("studyhelper_current_kid");
-    localStorage.removeItem("studyhelper_mode");
-    localStorage.removeItem("studyhelper_auth");
+    try {
+      localStorage.removeItem("studyhelper_family");
+      localStorage.removeItem("studyhelper_current_kid");
+      localStorage.removeItem("studyhelper_mode");
+      localStorage.removeItem("studyhelper_auth");
+    } catch (e) {
+      console.error("Error clearing localStorage:", e);
+    }
   }, []);
 
   const logoutKid = useCallback(() => {
     setCurrentKid(null);
     setMode(null);
     setIsAuthenticated(false);
-    localStorage.removeItem("studyhelper_current_kid");
-    localStorage.removeItem("studyhelper_mode");
+    try {
+      localStorage.removeItem("studyhelper_current_kid");
+      localStorage.removeItem("studyhelper_mode");
+    } catch (e) {
+      console.error("Error clearing kid localStorage:", e);
+    }
   }, []);
 
   // Direct kid login (when kid logs in with their own email)
@@ -121,11 +137,15 @@ export const useAuth = () => {
     setCurrentKid(kidData);
     setMode("student");
     setIsAuthenticated(true);
-    localStorage.setItem("studyhelper_current_kid", JSON.stringify(kidData));
-    localStorage.setItem("studyhelper_mode", "student");
-    // Clear family data - kid doesn't have parent access
-    setFamily(null);
-    localStorage.removeItem("studyhelper_family");
+    try {
+      localStorage.setItem("studyhelper_current_kid", JSON.stringify(kidData));
+      localStorage.setItem("studyhelper_mode", "student");
+      // Clear family data - kid doesn't have parent access
+      setFamily(null);
+      localStorage.removeItem("studyhelper_family");
+    } catch (e) {
+      console.error("Error saving kid login to localStorage:", e);
+    }
   }, []);
 
   const refreshKid = useCallback(async () => {
