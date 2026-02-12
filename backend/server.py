@@ -295,6 +295,8 @@ class Family(BaseModel):
     family_name: str = "My Family"
     parent_pin: str = "1234"
     curriculum: str = "caps"  # Default curriculum
+    referral_code: str = Field(default_factory=lambda: ''.join(random.choices('ABCDEFGHJKLMNPQRSTUVWXYZ23456789', k=8)))
+    referred_by: Optional[str] = None  # Referral code used during signup
     is_premium: bool = False
     premium_expires: Optional[str] = None
     ai_questions_today: int = 0
@@ -306,6 +308,7 @@ class FamilyRegister(BaseModel):
     password: str
     family_name: str
     curriculum: str = "caps"
+    referral_code: Optional[str] = None  # Optional referral code
 
 class FamilyLogin(BaseModel):
     email: str
@@ -320,6 +323,7 @@ class FamilyResponse(BaseModel):
     is_admin: bool = False
     premium_expires: Optional[str] = None
     kids_count: int = 0
+    referral_code: Optional[str] = None
 
 class KidLoginResponse(BaseModel):
     """Response for kid login - limited access"""
