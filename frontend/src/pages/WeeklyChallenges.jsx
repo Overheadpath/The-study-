@@ -41,7 +41,8 @@ const WeeklyChallenges = ({ auth }) => {
     deadline: ""
   });
 
-  const isParent = auth.mode === "parent";
+  // Check if user is a parent - either by mode or by checking if accessed via /parent/ route
+  const isParent = auth.mode === "parent" || window.location.pathname.startsWith("/parent");
 
   useEffect(() => {
     fetchData();
