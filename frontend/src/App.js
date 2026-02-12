@@ -42,32 +42,43 @@ export const api = axios.create({
 
 // Auth hook
 export const useAuth = () => {
-  const [family, setFamily] = useState(() => {
-    // Initialize from localStorage immediately
-    const saved = localStorage.getItem("studyhelper_family");
-    return saved ? JSON.parse(saved) : null;
-  });
-  const [currentKid, setCurrentKid] = useState(() => {
-    const saved = localStorage.getItem("studyhelper_current_kid");
-    return saved ? JSON.parse(saved) : null;
-  });
-  const [mode, setMode] = useState(() => {
-    return localStorage.getItem("studyhelper_mode") || null;
-  });
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return !!(localStorage.getItem("studyhelper_family") || localStorage.getItem("studyhelper_current_kid"));
-  });
-  const [isLoading, setIsLoading] = useState(true);
+  // Initialize state directly from localStorage (synchronous)
+  const getInitialFamily = () => {
+    try {
+      const saved = localStorage.getItem("studyhelper_family");
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      console.error("Error reading family from localStorage:", e);
+      return null;
+    }
+  };
 
-  useEffect(() => {
-    // Quick check to set loading false
-    setIsLoading(false);
-  }, []);
+  const getInitialKid = () => {
+    try {
+      const saved = localStorage.getItem("studyhelper_current_kid");
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      console.error("Error reading kid from localStorage:", e);
+      return null;
+    }
+  };
+
+  const [family, setFamily] = useState(getInitialFamily);
+  const [currentKid, setCurrentKid] = useState(getInitialKid);
+  const [mode, setMode] = useState(() => localStorage.getItem("studyhelper_mode") || null);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return !!(getInitialFamily() || getInitialKid());
+  });
+  const [isLoading, setIsLoading] = useState(false); // Start as false since we init synchronously
 
   const loginFamily = useCallback((familyData) => {
     setFamily(familyData);
     setIsAuthenticated(true);
-    localStorage.setItem("studyhelper_family", JSON.stringify(familyData));
+    try {
+      localStorage.setItem("studyhelper_family", JSON.stringify(familyData));
+    } catch (e) {
+      console.error("Error saving family to localStorage:", e);
+    }
   }, []);
 
   const selectKid = useCallback((kid) => {
