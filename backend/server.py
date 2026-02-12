@@ -28,8 +28,8 @@ EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 # Stripe Key
 STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY')
 
-# Subscription pricing (in USD - R20 ZAR ≈ $1.10 USD)
-SUBSCRIPTION_PRICE = 1.10
+# Subscription pricing (in USD)
+SUBSCRIPTION_PRICE = 2.00
 
 # Admin emails - these get free premium access
 ADMIN_EMAILS = [
