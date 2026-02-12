@@ -7,6 +7,7 @@ import {
   ChevronRight, LogOut, Settings, CreditCard
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ShareNotifications from "@/components/ShareNotifications";
 
 const FamilyDashboard = ({ family, onLogout, onSelectKid, onUpdateFamily }) => {
   const navigate = useNavigate();
