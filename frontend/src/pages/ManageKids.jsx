@@ -126,9 +126,49 @@ const ManageKids = ({ auth }) => {
     } catch (error) {
       console.error("Failed to save:", error);
       const message = error.response?.data?.detail || "Failed to save kid";
-      toast.error(message);
+      
+      // Check if email already registered - offer to send share request
+      if (message.includes("Email already registered") && form.email) {
+        const confirmShare = window.confirm(
+          `This email is already registered to another account.\n\nWould you like to send a SHARE REQUEST to that account?\n\nIf they approve, you'll both be able to see ${form.name}'s progress!`
+        );
+        
+        if (confirmShare) {
+          await sendShareRequest();
+        }
+      } else {
+        toast.error(message);
+      }
     } finally {
       setSaving(false);
+    }
+  };
+
+  const sendShareRequest = async () => {
+    try {
+      const familyData = localStorage.getItem("studyhelper_family");
+      if (!familyData) {
+        toast.error("Please log in first");
+        return;
+      }
+      const family = JSON.parse(familyData);
+      
+      const response = await api.post(`/share/request?family_id=${family.id}`, {
+        to_email: form.email,
+        kid_name: form.name,
+        kid_grade: parseInt(form.grade),
+        kid_pin: form.pin,
+        kid_email: form.email,
+        kid_password: form.password,
+        avatar_color: form.avatar_color
+      });
+      
+      toast.success("Share request sent! They'll need to approve it.");
+      setShowAddDialog(false);
+      setForm({ name: "", grade: "4", pin: "", avatar_color: AVATAR_COLORS[0], email: "", password: "" });
+    } catch (error) {
+      const message = error.response?.data?.detail || "Failed to send share request";
+      toast.error(message);
     }
   };
 
