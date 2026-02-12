@@ -242,6 +242,29 @@ class WeeklyChallengeCreate(BaseModel):
     target_kid_id: Optional[str] = None
     deadline: str
 
+# Referral System
+class Referral(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    referrer_family_id: str  # Who sent the referral
+    referral_code: str  # Unique code
+    referred_email: Optional[str] = None  # Who used it
+    referred_family_id: Optional[str] = None
+    status: str = "pending"  # pending, used, rewarded
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Achievement Certificates
+class Certificate(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    kid_id: str
+    kid_name: str
+    achievement_type: str  # e.g., "points_milestone", "streak", "subject_master"
+    achievement_title: str
+    achievement_description: str
+    points_at_time: int
+    issued_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 class TypingSession(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
