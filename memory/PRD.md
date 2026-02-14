@@ -192,4 +192,4 @@ Allows two parent accounts to share a kid:
 - [ ] Push notifications
 
 ## Last Updated
-February 14, 2026 - Added Referral Program, Achievement Certificates, Settings page, and fixed hover visibility & back button issues
+February 14, 2026 - Added Kahoot-style avatar selection, functional Settings page (Profile edit, Password change), Voice-to-text for AI Tutor
