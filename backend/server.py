@@ -300,6 +300,10 @@ class Family(BaseModel):
     curriculum: str = "caps"  # Default curriculum
     referral_code: str = Field(default_factory=lambda: ''.join(random.choices('ABCDEFGHJKLMNPQRSTUVWXYZ23456789', k=8)))
     referred_by: Optional[str] = None  # Referral code used during signup
+    avatar_id: str = "fox"
+    avatar_emoji: str = "🦊"
+    avatar_color: str = "#FF6B35"
+    email_notifications: bool = True
     is_premium: bool = False
     premium_expires: Optional[str] = None
     ai_questions_today: int = 0
@@ -312,6 +316,10 @@ class FamilyRegister(BaseModel):
     family_name: str
     curriculum: str = "caps"
     referral_code: Optional[str] = None  # Optional referral code
+    avatar_id: Optional[str] = "fox"
+    avatar_emoji: Optional[str] = "🦊"
+    avatar_color: Optional[str] = "#FF6B35"
+    email_notifications: Optional[bool] = True
 
 class FamilyLogin(BaseModel):
     email: str
@@ -322,6 +330,9 @@ class FamilyResponse(BaseModel):
     email: str
     family_name: str
     curriculum: str = "caps"
+    avatar_id: str = "fox"
+    avatar_emoji: str = "🦊"
+    avatar_color: str = "#FF6B35"
     is_premium: bool
     is_admin: bool = False
     premium_expires: Optional[str] = None
