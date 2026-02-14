@@ -95,11 +95,11 @@ const FamilyDashboard = ({ family, onLogout, onSelectKid, onUpdateFamily }) => {
             <ReferralProgram family={family} />
             <ShareNotifications familyId={family?.id} />
             <button 
-              onClick={onLogout}
+              onClick={() => navigate("/settings")}
               className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-              data-testid="logout-btn"
+              data-testid="settings-btn"
             >
-              <LogOut className="w-5 h-5" />
+              <Settings className="w-5 h-5" />
             </button>
           </div>
         </div>
