@@ -14,7 +14,7 @@ Multi-tenant SaaS platform:
 - 1 child profile
 - 5 AI questions per day
 
-### Premium Tier ($1/month)
+### Premium Tier ($2/month)
 - Unlimited child profiles
 - Unlimited AI questions
 - Ad-free experience
