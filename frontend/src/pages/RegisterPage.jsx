@@ -74,7 +74,11 @@ const RegisterPage = ({ onRegister }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (step === 1) {
-      handleNext();
+      if (validate()) setStep(2);
+      return;
+    }
+    if (step === 2) {
+      setStep(3);
       return;
     }
     
@@ -87,7 +91,11 @@ const RegisterPage = ({ onRegister }) => {
         password: form.password,
         family_name: form.familyName,
         curriculum: form.curriculum,
-        referral_code: form.referralCode || null
+        referral_code: form.referralCode || null,
+        avatar_id: form.avatar.id,
+        avatar_emoji: form.avatar.emoji,
+        avatar_color: form.avatar.color,
+        email_notifications: form.emailNotifications
       });
 
       if (form.referralCode && referralValid) {
