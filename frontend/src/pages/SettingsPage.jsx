@@ -205,9 +205,8 @@ const SettingsPage = ({ auth, family, onLogout, onUpdateFamily, userType }) => {
                 <ChevronRight className="w-5 h-5 text-gray-400" />
               </button>
 
-              <button 
-                onClick={() => setShowProfileDialog(true)}
-                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left"
+              <div 
+                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors"
               >
                 <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
                   <Bell className="w-5 h-5 text-purple-600" />
