@@ -29,6 +29,7 @@ import Badges from "@/pages/Badges";
 import WeeklyChallenges from "@/pages/WeeklyChallenges";
 import PaymentSuccess from "@/pages/PaymentSuccess";
 import Certificates from "@/pages/Certificates";
+import SettingsPage from "@/pages/SettingsPage";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
