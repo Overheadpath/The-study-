@@ -443,6 +443,30 @@ function App() {
             } 
           />
 
+          {/* Settings routes */}
+          <Route 
+            path="/settings" 
+            element={
+              auth.family ? (
+                <SettingsPage 
+                  auth={legacyAuth} 
+                  family={auth.family} 
+                  onLogout={auth.logout} 
+                  userType="parent" 
+                />
+              ) : auth.currentKid ? (
+                <SettingsPage 
+                  auth={legacyAuth} 
+                  family={null} 
+                  onLogout={auth.logoutKid} 
+                  userType="kid" 
+                />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            } 
+          />
+
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
