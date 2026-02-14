@@ -183,4 +183,4 @@ Allows two parent accounts to share a kid:
 - [ ] Push notifications
 
 ## Last Updated
-February 14, 2026 - Added Referral Program and Achievement Certificates features
+February 14, 2026 - Added Referral Program, Achievement Certificates, Settings page, and fixed hover visibility & back button issues
