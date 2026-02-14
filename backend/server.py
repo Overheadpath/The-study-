@@ -532,6 +532,10 @@ async def register_family(data: FamilyRegister):
         family_name=data.family_name,
         curriculum=data.curriculum,
         referred_by=referred_by,
+        avatar_id=data.avatar_id or "fox",
+        avatar_emoji=data.avatar_emoji or "🦊",
+        avatar_color=data.avatar_color or "#FF6B35",
+        email_notifications=data.email_notifications if data.email_notifications is not None else True,
         is_premium=admin  # Admins get premium automatically
     )
     
@@ -581,6 +585,9 @@ async def register_family(data: FamilyRegister):
         email=family.email,
         family_name=family.family_name,
         curriculum=family.curriculum,
+        avatar_id=family.avatar_id,
+        avatar_emoji=family.avatar_emoji,
+        avatar_color=family.avatar_color,
         is_premium=admin or (referred_by is not None),
         is_admin=admin,
         kids_count=0,
