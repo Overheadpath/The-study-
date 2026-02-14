@@ -255,6 +255,21 @@ const StudentDashboard = ({ auth }) => {
           </button>
 
           <button
+            data-testid="certificates-btn"
+            onClick={() => navigate("/student/certificates")}
+            className="w-full card-playful flex items-center gap-4 hover:border-amber-300 animate-fade-in"
+          >
+            <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+              <FileText className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1 text-left">
+              <h3 className="font-bold text-gray-800 font-heading">My Certificates</h3>
+              <p className="text-sm text-gray-500">View your achievement awards</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-gray-400" />
+          </button>
+
+          <button
             data-testid="history-btn"
             onClick={() => navigate("/student/history")}
             className="w-full card-playful flex items-center gap-4 hover:border-gray-300 animate-fade-in"
