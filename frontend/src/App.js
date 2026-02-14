@@ -478,7 +478,8 @@ function App() {
                 <SettingsPage 
                   auth={legacyAuth} 
                   family={auth.family} 
-                  onLogout={auth.logout} 
+                  onLogout={auth.logout}
+                  onUpdateFamily={auth.loginFamily}
                   userType="parent" 
                 />
               ) : auth.currentKid ? (
