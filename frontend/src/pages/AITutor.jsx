@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/App";
 import { toast } from "sonner";
-import { ArrowLeft, Send, Trash2, BookOpen, Sparkles, Camera, X, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Send, Trash2, BookOpen, Sparkles, Camera, X, Image as ImageIcon, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -23,9 +23,74 @@ const AITutor = ({ auth }) => {
   const [imagePreview, setImagePreview] = useState(null);
   const [imageUrl, setImageUrl] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
+  const recognitionRef = useRef(null);
+
+  // Initialize speech recognition
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      setSpeechSupported(true);
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = true;
+      recognitionRef.current.lang = 'en-US';
+      
+      recognitionRef.current.onresult = (event) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        setInput(prev => prev + transcript);
+        
+        if (event.results[event.results.length - 1].isFinal) {
+          setIsListening(false);
+        }
+      };
+      
+      recognitionRef.current.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+        if (event.error === 'not-allowed') {
+          toast.error('Please allow microphone access to use voice input');
+        }
+      };
+      
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+    }
+    
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, []);
+
+  const toggleListening = () => {
+    if (!speechSupported) {
+      toast.error('Voice input is not supported in your browser');
+      return;
+    }
+    
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    } else {
+      try {
+        recognitionRef.current?.start();
+        setIsListening(true);
+        toast.success('Listening... Speak now!');
+      } catch (e) {
+        console.error('Failed to start speech recognition:', e);
+      }
+    }
+  };
 
   useEffect(() => {
     fetchKidAndSubjects();
