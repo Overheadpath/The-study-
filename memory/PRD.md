@@ -169,10 +169,19 @@ Allows two parent accounts to share a kid:
 - `GET /api/certificates/{kid_id}` - Get all certificates for a kid
 - `GET /api/certificate/{certificate_id}/pdf` - Get printable certificate HTML
 
+### Profile/Settings
+- `PUT /api/profile/{family_id}` - Update profile (avatar, name, notifications)
+- `POST /api/profile/{family_id}/change-password` - Change password
+
 ## Prioritized Backlog
 
+### P0 (Next Up)
+- [ ] Homework Photo Scanner - AI reads text from homework photos
+- [ ] Parent Progress Reports - Weekly email summaries
+
 ### P1 (Important)
-- [ ] Password reset functionality
+- [ ] Multiple Challenges - Parents create multiple challenges at once
+- [ ] Password reset via email
 - [ ] Email notifications for share requests
 - [ ] Progress reports
 
