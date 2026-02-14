@@ -82,10 +82,15 @@ const RegisterPage = ({ onRegister }) => {
         email: form.email,
         password: form.password,
         family_name: form.familyName,
-        curriculum: form.curriculum
+        curriculum: form.curriculum,
+        referral_code: form.referralCode || null
       });
 
-      toast.success("Account created! Welcome to Study Helper!");
+      if (form.referralCode && referralValid) {
+        toast.success("🎉 Account created with FREE Premium month!");
+      } else {
+        toast.success("Account created! Welcome to Study Helper!");
+      }
       onRegister(response.data);
       navigate("/family");
     } catch (error) {
