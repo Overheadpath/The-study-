@@ -211,15 +211,42 @@ function App() {
     <div className="min-h-screen bg-[#FDFBF7]">
       <BrowserRouter>
         <Routes>
-          {/* Public routes */}
-          <Route path="/" element={<LandingPage />} />
+          {/* Public routes - redirect if already logged in */}
+          <Route 
+            path="/" 
+            element={
+              auth.currentKid ? (
+                <Navigate to="/student" replace />
+              ) : auth.family ? (
+                <Navigate to="/family" replace />
+              ) : (
+                <LandingPage />
+              )
+            } 
+          />
           <Route 
             path="/register" 
-            element={<RegisterPage onRegister={auth.loginFamily} />} 
+            element={
+              auth.currentKid ? (
+                <Navigate to="/student" replace />
+              ) : auth.family ? (
+                <Navigate to="/family" replace />
+              ) : (
+                <RegisterPage onRegister={auth.loginFamily} />
+              )
+            } 
           />
           <Route 
             path="/login" 
-            element={<LoginPage onLogin={auth.loginFamily} onKidLogin={auth.loginKid} />} 
+            element={
+              auth.currentKid ? (
+                <Navigate to="/student" replace />
+              ) : auth.family ? (
+                <Navigate to="/family" replace />
+              ) : (
+                <LoginPage onLogin={auth.loginFamily} onKidLogin={auth.loginKid} />
+              )
+            } 
           />
 
           {/* Family dashboard (after login) */}
