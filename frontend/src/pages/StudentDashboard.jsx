@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { 
   BookOpen, Gift, MessageCircle, PlusCircle, History, 
   LogOut, Star, Trophy, Sparkles, ChevronRight, Clock,
-  Keyboard, Award, Target, Flame, Users
+  Keyboard, Award, Target, Flame, Users, FileText
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ShareNotifications from "@/components/ShareNotifications";
+import ReferralProgram from "@/components/ReferralProgram";
 
 const FamilyDashboard = ({ family, onLogout, onSelectKid, onUpdateFamily }) => {
   const navigate = useNavigate();
@@ -91,6 +92,7 @@ const FamilyDashboard = ({ family, onLogout, onSelectKid, onUpdateFamily }) => {
           </div>
           
           <div className="flex items-center gap-2">
+            <ReferralProgram family={family} />
             <ShareNotifications familyId={family?.id} />
             <button 
               onClick={onLogout}

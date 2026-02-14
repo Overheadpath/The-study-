@@ -198,6 +198,44 @@ const RegisterPage = ({ onRegister }) => {
                   {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
                 </div>
 
+                {/* Referral Code Input */}
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 mb-1 block">
+                    Referral Code <span className="font-normal text-gray-400">(optional)</span>
+                  </label>
+                  <div className="relative">
+                    <Gift className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Input
+                      value={form.referralCode}
+                      onChange={(e) => {
+                        const code = e.target.value.toUpperCase();
+                        setForm({ ...form, referralCode: code });
+                        if (code.length >= 6) {
+                          validateReferralCode(code);
+                        } else {
+                          setReferralValid(null);
+                        }
+                      }}
+                      placeholder="Enter code for FREE month"
+                      className={`pl-10 h-12 uppercase ${
+                        referralValid === true ? 'border-green-500 bg-green-50' : 
+                        referralValid === false ? 'border-red-500 bg-red-50' : ''
+                      }`}
+                      maxLength={10}
+                      data-testid="referral-code-input"
+                    />
+                  </div>
+                  {referralValid === true && (
+                    <p className="text-green-600 text-xs mt-1 flex items-center gap-1">
+                      <Gift className="w-3 h-3" />
+                      Valid code from {referrerName}! You'll both get 1 month FREE Premium!
+                    </p>
+                  )}
+                  {referralValid === false && (
+                    <p className="text-red-500 text-xs mt-1">Invalid referral code</p>
+                  )}
+                </div>
+
                 <Button
                   type="button"
                   onClick={handleNext}
