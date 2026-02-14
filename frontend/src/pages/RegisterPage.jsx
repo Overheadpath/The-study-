@@ -120,18 +120,20 @@ const RegisterPage = ({ onRegister }) => {
             <span className="font-bold text-2xl text-gray-800 font-heading">Study Helper</span>
           </Link>
           <h1 className="text-2xl font-bold text-gray-800 font-heading">
-            {step === 1 ? "Create Your Account" : "Select Your Curriculum"}
+            {step === 1 ? "Create Your Account" : step === 2 ? "Choose Your Avatar" : "Select Your Curriculum"}
           </h1>
           <p className="text-gray-500">
-            {step === 1 ? "Start your family's learning journey" : "So we can tailor the AI tutor to your needs"}
+            {step === 1 ? "Start your family's learning journey" : step === 2 ? "Pick a fun character to represent your family!" : "So we can tailor the AI tutor to your needs"}
           </p>
         </div>
 
-        {/* Progress indicator */}
+        {/* Progress indicator - 3 steps */}
         <div className="flex items-center justify-center gap-2 mb-6">
           <div className={`w-3 h-3 rounded-full ${step >= 1 ? 'bg-indigo-600' : 'bg-gray-300'}`}></div>
-          <div className={`w-12 h-1 ${step >= 2 ? 'bg-indigo-600' : 'bg-gray-300'}`}></div>
+          <div className={`w-8 h-1 ${step >= 2 ? 'bg-indigo-600' : 'bg-gray-300'}`}></div>
           <div className={`w-3 h-3 rounded-full ${step >= 2 ? 'bg-indigo-600' : 'bg-gray-300'}`}></div>
+          <div className={`w-8 h-1 ${step >= 3 ? 'bg-indigo-600' : 'bg-gray-300'}`}></div>
+          <div className={`w-3 h-3 rounded-full ${step >= 3 ? 'bg-indigo-600' : 'bg-gray-300'}`}></div>
         </div>
 
         {/* Form */}
