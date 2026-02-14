@@ -374,7 +374,7 @@ const RegisterPage = ({ onRegister }) => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setStep(1)}
+                    onClick={() => setStep(2)}
                     className="flex-1 h-12"
                   >
                     Back
