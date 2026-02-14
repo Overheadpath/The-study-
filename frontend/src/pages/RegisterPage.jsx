@@ -244,13 +244,92 @@ const RegisterPage = ({ onRegister }) => {
 
                 <Button
                   type="button"
-                  onClick={handleNext}
+                  onClick={() => setStep(2)}
                   className="w-full h-12 bg-gradient-to-r from-indigo-500 to-purple-600"
                   data-testid="next-btn"
                 >
-                  Next: Select Curriculum
+                  Next: Choose Avatar
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
+              </>
+            ) : step === 2 ? (
+              <>
+                {/* Avatar Selection */}
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 mb-3 block text-center">
+                    Pick your family avatar!
+                  </label>
+                  
+                  {/* Current Selection */}
+                  <div className="flex justify-center mb-4">
+                    <div 
+                      className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl shadow-lg transition-transform hover:scale-105"
+                      style={{ backgroundColor: form.avatar.color }}
+                    >
+                      {form.avatar.emoji}
+                    </div>
+                  </div>
+                  <p className="text-center text-sm text-gray-600 mb-4 font-semibold">{form.avatar.name}</p>
+                  
+                  {/* Avatar Grid */}
+                  <div className="grid grid-cols-6 gap-2 max-h-[200px] overflow-y-auto p-2">
+                    {AVATAR_PRESETS.map((avatar) => (
+                      <button
+                        key={avatar.id}
+                        type="button"
+                        onClick={() => setForm({ ...form, avatar })}
+                        className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all hover:scale-110 ${
+                          form.avatar.id === avatar.id 
+                            ? 'ring-3 ring-indigo-500 ring-offset-2' 
+                            : ''
+                        }`}
+                        style={{ backgroundColor: avatar.color }}
+                        data-testid={`avatar-${avatar.id}`}
+                      >
+                        {avatar.emoji}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Email Notifications Opt-in */}
+                <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">
+                  <Checkbox
+                    id="emailNotifications"
+                    checked={form.emailNotifications}
+                    onCheckedChange={(checked) => setForm({ ...form, emailNotifications: checked })}
+                    data-testid="email-notifications-checkbox"
+                  />
+                  <div className="flex-1">
+                    <label htmlFor="emailNotifications" className="text-sm font-semibold text-gray-700 cursor-pointer flex items-center gap-2">
+                      <Bell className="w-4 h-4 text-indigo-500" />
+                      Send me email updates
+                    </label>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Get weekly progress reports and tips for your kids' learning
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setStep(1)}
+                    className="flex-1 h-12"
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => setStep(3)}
+                    className="flex-1 h-12 bg-gradient-to-r from-indigo-500 to-purple-600"
+                    data-testid="next-curriculum-btn"
+                  >
+                    Next
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
+                </div>
               </>
             ) : (
               <>
