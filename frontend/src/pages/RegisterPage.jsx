@@ -92,7 +92,7 @@ const RegisterPage = ({ onRegister }) => {
         toast.success("Account created! Welcome to Study Helper!");
       }
       onRegister(response.data);
-      navigate("/family");
+      navigate("/family", { replace: true });
     } catch (error) {
       console.error("Registration failed:", error);
       const message = error.response?.data?.detail || "Registration failed. Try again.";
