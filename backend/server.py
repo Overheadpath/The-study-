@@ -2013,6 +2013,185 @@ Grade: {kid['grade']}"""
         logging.error(f"Estimation error: {e}")
         return TaskPointEstimate(estimated_points=10, reasoning="Standard task submission")
 
+# ============ REFERRAL ROUTES ============
+
+@api_router.get("/referral/stats/{family_id}")
+async def get_referral_stats(family_id: str):
+    """Get referral statistics for a family"""
+    family = await db.families.find_one({"id": family_id}, {"_id": 0})
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
+    
+    # Count successful referrals
+    referrals = await db.referrals.find({
+        "referrer_family_id": family_id, 
+        "status": "rewarded"
+    }, {"_id": 0}).to_list(100)
+    
+    return {
+        "referral_code": family.get("referral_code"),
+        "total_referrals": len(referrals),
+        "months_earned": len(referrals),  # Each referral = 1 month
+        "referrals": [{"email": r.get("referred_email", ""), "date": r.get("created_at")} for r in referrals]
+    }
+
+@api_router.get("/referral/validate/{code}")
+async def validate_referral_code(code: str):
+    """Check if a referral code is valid"""
+    family = await db.families.find_one({"referral_code": code.upper()}, {"_id": 0})
+    if family:
+        return {"valid": True, "family_name": family.get("family_name")}
+    return {"valid": False}
+
+# ============ CERTIFICATE ROUTES ============
+
+CERTIFICATE_MILESTONES = [
+    {"points": 100, "title": "Rising Star", "description": "Earned 100 points"},
+    {"points": 250, "title": "Super Learner", "description": "Earned 250 points"},
+    {"points": 500, "title": "Knowledge Champion", "description": "Earned 500 points"},
+    {"points": 1000, "title": "Master Scholar", "description": "Earned 1000 points"},
+    {"points": 2500, "title": "Academic Legend", "description": "Earned 2500 points"},
+]
+
+@api_router.get("/certificates/{kid_id}")
+async def get_certificates(kid_id: str):
+    """Get all certificates earned by a kid"""
+    kid = await db.kids.find_one({"id": kid_id}, {"_id": 0})
+    if not kid:
+        raise HTTPException(status_code=404, detail="Kid not found")
+    
+    certificates = await db.certificates.find({"kid_id": kid_id}, {"_id": 0}).sort("issued_at", -1).to_list(100)
+    
+    # Check for new milestone certificates
+    current_points = kid.get("points", 0)
+    existing_milestones = [c.get("achievement_title") for c in certificates if c.get("achievement_type") == "points_milestone"]
+    
+    new_certificates = []
+    for milestone in CERTIFICATE_MILESTONES:
+        if current_points >= milestone["points"] and milestone["title"] not in existing_milestones:
+            cert = {
+                "id": str(uuid.uuid4()),
+                "kid_id": kid_id,
+                "kid_name": kid.get("name", "Student"),
+                "achievement_type": "points_milestone",
+                "achievement_title": milestone["title"],
+                "achievement_description": milestone["description"],
+                "points_at_time": current_points,
+                "issued_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.certificates.insert_one(serialize_doc(cert))
+            new_certificates.append(cert)
+    
+    # Fetch updated list
+    if new_certificates:
+        certificates = await db.certificates.find({"kid_id": kid_id}, {"_id": 0}).sort("issued_at", -1).to_list(100)
+    
+    return {"certificates": certificates, "new_certificates": new_certificates}
+
+@api_router.get("/certificate/{certificate_id}/pdf")
+async def get_certificate_pdf(certificate_id: str):
+    """Generate a printable certificate PDF"""
+    cert = await db.certificates.find_one({"id": certificate_id}, {"_id": 0})
+    if not cert:
+        raise HTTPException(status_code=404, detail="Certificate not found")
+    
+    # Generate HTML certificate
+    issued_date = cert.get("issued_at", "")[:10] if cert.get("issued_at") else datetime.now().strftime("%Y-%m-%d")
+    
+    html_content = f'''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Open+Sans&display=swap');
+            body {{
+                font-family: 'Open Sans', sans-serif;
+                margin: 0;
+                padding: 40px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }}
+            .certificate {{
+                background: white;
+                border: 8px solid #d4af37;
+                border-radius: 20px;
+                padding: 60px;
+                max-width: 800px;
+                text-align: center;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            }}
+            .header {{
+                color: #d4af37;
+                font-size: 14px;
+                letter-spacing: 4px;
+                text-transform: uppercase;
+                margin-bottom: 10px;
+            }}
+            .title {{
+                font-family: 'Playfair Display', serif;
+                font-size: 48px;
+                color: #333;
+                margin: 20px 0;
+            }}
+            .subtitle {{
+                font-size: 18px;
+                color: #666;
+                margin-bottom: 30px;
+            }}
+            .name {{
+                font-family: 'Playfair Display', serif;
+                font-size: 42px;
+                color: #4F46E5;
+                margin: 30px 0;
+                border-bottom: 3px solid #d4af37;
+                padding-bottom: 10px;
+                display: inline-block;
+            }}
+            .achievement {{
+                font-size: 24px;
+                color: #333;
+                margin: 30px 0;
+            }}
+            .description {{
+                font-size: 16px;
+                color: #666;
+                margin: 20px 0;
+            }}
+            .date {{
+                font-size: 14px;
+                color: #999;
+                margin-top: 40px;
+            }}
+            .badge {{
+                font-size: 60px;
+                margin: 20px 0;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="certificate">
+            <div class="header">Study Helper Academy</div>
+            <div class="title">Certificate of Achievement</div>
+            <div class="subtitle">This certificate is proudly presented to</div>
+            <div class="name">{cert.get("kid_name", "Student")}</div>
+            <div class="badge">🏆</div>
+            <div class="achievement">{cert.get("achievement_title", "Achievement")}</div>
+            <div class="description">{cert.get("achievement_description", "")}</div>
+            <div class="date">Awarded on {issued_date}</div>
+        </div>
+    </body>
+    </html>
+    '''
+    
+    return StreamingResponse(
+        io.StringIO(html_content),
+        media_type="text/html",
+        headers={"Content-Disposition": f"inline; filename=certificate_{certificate_id}.html"}
+    )
+
 # Include the router in the main app
 app.include_router(api_router)
 
