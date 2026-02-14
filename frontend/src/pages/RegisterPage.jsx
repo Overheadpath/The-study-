@@ -2,16 +2,18 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { api } from "@/App";
 import { toast } from "sonner";
-import { BookOpen, Mail, Lock, User, ArrowRight, Globe, Gift } from "lucide-react";
+import { BookOpen, Mail, Lock, User, ArrowRight, Globe, Gift, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CURRICULUMS } from "@/constants/curriculums";
+import { AVATAR_PRESETS, getRandomAvatar } from "@/constants/avatars";
 
 const RegisterPage = ({ onRegister }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState(1); // 1: Account info, 2: Curriculum selection
+  const [step, setStep] = useState(1); // 1: Account info, 2: Avatar & Preferences, 3: Curriculum
   const [referralValid, setReferralValid] = useState(null);
   const [referrerName, setReferrerName] = useState("");
   const [form, setForm] = useState({
@@ -20,7 +22,9 @@ const RegisterPage = ({ onRegister }) => {
     confirmPassword: "",
     familyName: "",
     curriculum: "caps",
-    referralCode: ""
+    referralCode: "",
+    avatar: getRandomAvatar(),
+    emailNotifications: true
   });
   const [errors, setErrors] = useState({});
 
