@@ -2213,6 +2213,85 @@ async def get_certificate_pdf(certificate_id: str):
         headers={"Content-Disposition": f"inline; filename=certificate_{certificate_id}.html"}
     )
 
+
+# ============ PROFILE/SETTINGS ROUTES ============
+
+class ProfileUpdate(BaseModel):
+    family_name: Optional[str] = None
+    avatar_id: Optional[str] = None
+    avatar_emoji: Optional[str] = None
+    avatar_color: Optional[str] = None
+    email_notifications: Optional[bool] = None
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
+@api_router.put("/profile/{family_id}")
+async def update_profile(family_id: str, data: ProfileUpdate):
+    """Update family profile"""
+    family = await db.families.find_one({"id": family_id}, {"_id": 0})
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
+    
+    update_data = {}
+    if data.family_name is not None:
+        update_data["family_name"] = data.family_name
+    if data.avatar_id is not None:
+        update_data["avatar_id"] = data.avatar_id
+    if data.avatar_emoji is not None:
+        update_data["avatar_emoji"] = data.avatar_emoji
+    if data.avatar_color is not None:
+        update_data["avatar_color"] = data.avatar_color
+    if data.email_notifications is not None:
+        update_data["email_notifications"] = data.email_notifications
+    
+    if update_data:
+        await db.families.update_one({"id": family_id}, {"$set": update_data})
+    
+    # Get updated family
+    updated_family = await db.families.find_one({"id": family_id}, {"_id": 0})
+    admin = is_admin_email(updated_family.get("email", ""))
+    kids_count = await db.kids.count_documents({"family_id": family_id})
+    
+    return {
+        "id": updated_family["id"],
+        "email": updated_family["email"],
+        "family_name": updated_family.get("family_name", "My Family"),
+        "curriculum": updated_family.get("curriculum", "caps"),
+        "avatar_id": updated_family.get("avatar_id", "fox"),
+        "avatar_emoji": updated_family.get("avatar_emoji", "🦊"),
+        "avatar_color": updated_family.get("avatar_color", "#FF6B35"),
+        "is_premium": admin or updated_family.get("is_premium", False),
+        "is_admin": admin,
+        "premium_expires": None if admin else updated_family.get("premium_expires"),
+        "kids_count": kids_count,
+        "referral_code": updated_family.get("referral_code")
+    }
+
+@api_router.post("/profile/{family_id}/change-password")
+async def change_password(family_id: str, data: PasswordChange):
+    """Change family password"""
+    family = await db.families.find_one({"id": family_id}, {"_id": 0})
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
+    
+    # Verify current password
+    if not verify_password(data.current_password, family.get("password_hash", "")):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    
+    # Validate new password
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters")
+    
+    # Update password
+    new_hash = hash_password(data.new_password)
+    await db.families.update_one({"id": family_id}, {"$set": {"password_hash": new_hash}})
+    
+    return {"message": "Password changed successfully"}
+
+
+
 # Include the router in the main app
 app.include_router(api_router)
 
