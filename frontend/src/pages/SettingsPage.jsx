@@ -232,7 +232,7 @@ const SettingsPage = ({ auth, family, onLogout, onUpdateFamily, userType }) => {
                     }
                   }}
                 />
-              </button>
+              </div>
 
               <button 
                 onClick={() => setShowPasswordDialog(true)}
