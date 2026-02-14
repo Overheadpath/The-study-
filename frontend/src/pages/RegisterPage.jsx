@@ -1,25 +1,53 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { api } from "@/App";
 import { toast } from "sonner";
-import { BookOpen, Mail, Lock, User, ArrowRight, Globe, ChevronDown } from "lucide-react";
+import { BookOpen, Mail, Lock, User, ArrowRight, Globe, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CURRICULUMS } from "@/constants/curriculums";
 
 const RegisterPage = ({ onRegister }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1); // 1: Account info, 2: Curriculum selection
+  const [referralValid, setReferralValid] = useState(null);
+  const [referrerName, setReferrerName] = useState("");
   const [form, setForm] = useState({
     email: "",
     password: "",
     confirmPassword: "",
     familyName: "",
-    curriculum: "caps", // Default to CAPS
-    country: ""
+    curriculum: "caps",
+    referralCode: ""
   });
   const [errors, setErrors] = useState({});
+
+  // Check for referral code in URL
+  useEffect(() => {
+    const refCode = searchParams.get("ref");
+    if (refCode) {
+      setForm(prev => ({ ...prev, referralCode: refCode }));
+      validateReferralCode(refCode);
+    }
+  }, [searchParams]);
+
+  const validateReferralCode = async (code) => {
+    if (!code || code.length < 6) {
+      setReferralValid(null);
+      return;
+    }
+    try {
+      const response = await api.get(`/referral/validate/${code}`);
+      setReferralValid(response.data.valid);
+      if (response.data.valid) {
+        setReferrerName(response.data.family_name);
+      }
+    } catch (error) {
+      setReferralValid(false);
+    }
+  };
 
   const validate = () => {
     const newErrors = {};
