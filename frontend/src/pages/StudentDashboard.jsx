@@ -4,7 +4,7 @@ import { api } from "@/App";
 import { toast } from "sonner";
 import { 
   BookOpen, Gift, MessageCircle, PlusCircle, History, 
-  LogOut, Star, Trophy, Sparkles, ChevronRight, Clock,
+  Settings, Star, Trophy, Sparkles, ChevronRight, Clock,
   Keyboard, Award, Target, Flame, Users, FileText
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
@@ -48,7 +48,13 @@ const StudentDashboard = ({ auth }) => {
 
   const handleLogout = () => {
     auth.logout();
-    navigate("/");
+    // Clear browser history and navigate to landing
+    window.history.replaceState(null, "", "/");
+    navigate("/", { replace: true });
+  };
+
+  const handleSettings = () => {
+    navigate("/settings", { replace: false });
   };
 
   if (loading) {
