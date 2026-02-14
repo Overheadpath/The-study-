@@ -427,6 +427,26 @@ const AITutor = ({ auth }) => {
                 disabled={loading}
               />
             </div>
+            
+            {/* Microphone Button */}
+            {speechSupported && (
+              <button
+                onClick={toggleListening}
+                className={`h-[52px] w-[52px] flex-shrink-0 flex items-center justify-center rounded-2xl transition-all ${
+                  isListening 
+                    ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
+                    : 'bg-gray-100 hover:bg-emerald-100'
+                }`}
+                data-testid="mic-btn"
+              >
+                {isListening ? (
+                  <MicOff className="w-5 h-5 text-white" />
+                ) : (
+                  <Mic className="w-5 h-5 text-gray-600" />
+                )}
+              </button>
+            )}
+            
             <Button
               onClick={handleSend}
               disabled={(!input.trim() && !imageUrl) || loading || uploading}
@@ -437,7 +457,7 @@ const AITutor = ({ auth }) => {
             </Button>
           </div>
           <p className="text-xs text-gray-400 mt-2 text-center">
-            I'll guide you to find the answer yourself - that's how you really learn!
+            {isListening ? "🎤 Listening... Click mic to stop" : "I'll guide you to find the answer yourself - that's how you really learn!"}
           </p>
         </div>
       </div>
