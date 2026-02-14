@@ -340,6 +340,16 @@ function App() {
             } 
           />
           <Route 
+            path="/student/certificates" 
+            element={
+              auth.currentKid ? (
+                <Certificates auth={legacyAuth} />
+              ) : (
+                <Navigate to="/family" replace />
+              )
+            } 
+          />
+          <Route 
             path="/student/challenges" 
             element={
               auth.currentKid ? (
