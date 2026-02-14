@@ -34,12 +34,12 @@ const LoginPage = ({ onLogin, onKidLogin }) => {
         // Kid login - go directly to student dashboard
         toast.success(`Welcome back, ${data.kid.name}! 🎉`);
         onKidLogin(data.kid);
-        navigate("/student");
+        navigate("/student", { replace: true });
       } else {
         // Parent login - go to family dashboard
         toast.success(`Welcome back, ${data.family.family_name}!`);
         onLogin(data.family);
-        navigate("/family");
+        navigate("/family", { replace: true });
       }
     } catch (error) {
       console.error("Login failed:", error);
