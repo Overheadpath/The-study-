@@ -72,8 +72,11 @@ const FamilyDashboard = ({ family, onLogout, onSelectKid, onUpdateFamily }) => {
       <header className="bg-white border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center">
-              <BookOpen className="w-6 h-6 text-white" />
+            <div 
+              className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl"
+              style={{ backgroundColor: family?.avatar_color || "#4F46E5" }}
+            >
+              {family?.avatar_emoji || "🦊"}
             </div>
             <div>
               <h1 className="font-bold text-gray-800 font-heading text-lg">{family?.family_name}</h1>
