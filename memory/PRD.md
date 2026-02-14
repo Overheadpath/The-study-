@@ -104,6 +104,22 @@ Allows two parent accounts to share a kid:
 - [x] Approve/Reject workflow
 - [x] Shared kids visible to both families
 
+### Referral Program (NEW - Feb 14, 2026)
+- [x] Unique referral code per family
+- [x] Referral code input on registration page
+- [x] Real-time code validation
+- [x] Both referrer and referred get 1 month FREE Premium
+- [x] "Invite Friends" button in Family Dashboard
+- [x] Referral dialog with code, copy button, stats
+- [x] Share referral link via Web Share API
+
+### Achievement Certificates (NEW - Feb 14, 2026)
+- [x] Automatic certificate generation at milestones (100, 250, 500, 1000, 2500 points)
+- [x] "My Certificates" button in Student Dashboard
+- [x] Certificates page showing earned awards
+- [x] Printable HTML certificate with styling
+- [x] New certificate notifications
+
 ### PWA
 - [x] Web App Manifest
 - [x] Service Worker (v2)
@@ -145,6 +161,14 @@ Allows two parent accounts to share a kid:
 - `GET /api/subscription/status/{family_id}`
 - `POST /api/subscription/checkout`
 
+### Referrals
+- `GET /api/referral/stats/{family_id}` - Get referral stats and code
+- `GET /api/referral/validate/{code}` - Validate a referral code
+
+### Certificates
+- `GET /api/certificates/{kid_id}` - Get all certificates for a kid
+- `GET /api/certificate/{certificate_id}/pdf` - Get printable certificate HTML
+
 ## Prioritized Backlog
 
 ### P1 (Important)
@@ -159,4 +183,4 @@ Allows two parent accounts to share a kid:
 - [ ] Push notifications
 
 ## Last Updated
-February 12, 2026 - Added session persistence, account sharing system
+February 14, 2026 - Added Referral Program and Achievement Certificates features
