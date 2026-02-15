@@ -84,12 +84,18 @@ Allows two parent accounts to share a kid:
 - [x] Points tracking
 
 ### Gamification
-- [x] Study Timer (Pomodoro-style)
+- [x] Daily Rewards (7-day calendar with streak bonuses, replaced Study Timer)
 - [x] Typing Practice
 - [x] Leaderboard
 - [x] Badges system
 - [x] Weekly Challenges
 - [x] Study Streaks
+- [x] Subject Mastery Levels (Bronze → Silver → Gold → Master)
+
+### Dark Mode & Appearance
+- [x] Dark mode toggle in Settings
+- [x] Theme persists in localStorage
+- [x] Smooth transition between light/dark modes
 
 ### Authentication
 - [x] Parent email/password login
