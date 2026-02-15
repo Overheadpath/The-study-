@@ -338,10 +338,10 @@ function App() {
             } 
           />
           <Route 
-            path="/student/timer" 
+            path="/student/daily-rewards" 
             element={
               auth.currentKid ? (
-                <StudyTimer auth={legacyAuth} />
+                <DailyRewards auth={legacyAuth} />
               ) : (
                 <Navigate to="/family" replace />
               )
