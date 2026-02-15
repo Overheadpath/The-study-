@@ -206,14 +206,14 @@ const StudentDashboard = ({ auth }) => {
           </button>
 
           <button
-            data-testid="study-timer-btn"
-            onClick={() => navigate("/student/timer")}
-            className="card-playful flex flex-col items-center gap-2 py-5 hover:border-blue-300 animate-fade-in"
+            data-testid="daily-rewards-btn"
+            onClick={() => navigate("/student/daily-rewards")}
+            className="card-playful flex flex-col items-center gap-2 py-5 hover:border-amber-300 animate-fade-in"
           >
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl flex items-center justify-center">
-              <Clock className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center">
+              <Gift className="w-6 h-6 text-white" />
             </div>
-            <span className="font-bold text-gray-800 font-heading">Study Timer</span>
+            <span className="font-bold text-gray-800 font-heading">Daily Rewards</span>
           </button>
 
           <button
