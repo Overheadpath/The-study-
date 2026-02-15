@@ -156,20 +156,20 @@ const SettingsPage = ({ auth, family, onLogout, onUpdateFamily, userType }) => {
   const avatarColor = family?.avatar_color || "#4F46E5";
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7]" data-testid="settings-page">
+    <div className="min-h-screen bg-[#FDFBF7] dark:bg-gray-900 transition-colors" data-testid="settings-page">
       {/* Header */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center gap-3">
           <button 
             onClick={handleBack}
-            className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
             data-testid="back-btn"
           >
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
+            <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
           </button>
           <div>
-            <h1 className="font-bold text-gray-800 font-heading text-lg">Settings</h1>
-            <p className="text-sm text-gray-500">Manage your account</p>
+            <h1 className="font-bold text-gray-800 dark:text-white font-heading text-lg">Settings</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Manage your account</p>
           </div>
         </div>
       </header>
