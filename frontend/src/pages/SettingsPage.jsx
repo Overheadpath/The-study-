@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/App";
 import { toast } from "sonner";
 import { 
   ArrowLeft, LogOut, User, Bell, Shield, 
-  Palette, HelpCircle, ChevronRight, Crown, Lock, Check
+  Moon, Sun, HelpCircle, ChevronRight, Crown, Lock, Check
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,21 @@ const SettingsPage = ({ auth, family, onLogout, onUpdateFamily, userType }) => {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem('theme') === 'dark' || 
+      (window.matchMedia('(prefers-color-scheme: dark)').matches && !localStorage.getItem('theme'));
+  });
+
+  // Apply dark mode
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [darkMode]);
   
   // Profile form
   const [profileForm, setProfileForm] = useState({
