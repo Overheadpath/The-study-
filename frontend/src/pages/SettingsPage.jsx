@@ -266,20 +266,46 @@ const SettingsPage = ({ auth, family, onLogout, onUpdateFamily, userType }) => {
             </div>
           </div>
 
+          {/* Appearance Section */}
+          <div className="card-playful dark:bg-gray-800 dark:border-gray-700">
+            <h3 className="font-bold text-gray-800 dark:text-white mb-3 font-heading text-sm uppercase tracking-wide">Appearance</h3>
+            <div className="space-y-1">
+              <div className="w-full flex items-center gap-3 p-3 rounded-xl">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${darkMode ? 'bg-indigo-900' : 'bg-amber-100'}`}>
+                  {darkMode ? <Moon className="w-5 h-5 text-indigo-300" /> : <Sun className="w-5 h-5 text-amber-600" />}
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-800 dark:text-white">Dark Mode</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {darkMode ? "Currently dark" : "Currently light"}
+                  </p>
+                </div>
+                <Switch 
+                  checked={darkMode}
+                  onCheckedChange={(checked) => {
+                    setDarkMode(checked);
+                    toast.success(checked ? "Dark mode enabled 🌙" : "Light mode enabled ☀️");
+                  }}
+                  data-testid="dark-mode-toggle"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Support Section */}
-          <div className="card-playful">
-            <h3 className="font-bold text-gray-800 mb-3 font-heading text-sm uppercase tracking-wide">Support</h3>
+          <div className="card-playful dark:bg-gray-800 dark:border-gray-700">
+            <h3 className="font-bold text-gray-800 dark:text-white mb-3 font-heading text-sm uppercase tracking-wide">Support</h3>
             <div className="space-y-1">
               <a 
                 href="mailto:support@studyhelper.com"
-                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left"
+                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
               >
-                <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-                  <HelpCircle className="w-5 h-5 text-blue-600" />
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-xl flex items-center justify-center">
+                  <HelpCircle className="w-5 h-5 text-blue-600 dark:text-blue-300" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold text-gray-800">Help & Support</p>
-                  <p className="text-sm text-gray-500">Contact us for help</p>
+                  <p className="font-semibold text-gray-800 dark:text-white">Help & Support</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Contact us for help</p>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-400" />
               </a>
