@@ -177,7 +177,7 @@ const SettingsPage = ({ auth, family, onLogout, onUpdateFamily, userType }) => {
       {/* Main Content */}
       <main className="max-w-3xl mx-auto px-6 py-8">
         {/* Profile Card */}
-        <div className="card-playful mb-6">
+        <div className="card-playful dark:bg-gray-800 dark:border-gray-700 mb-6">
           <div className="flex items-center gap-4">
             <div 
               className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl"
@@ -186,8 +186,8 @@ const SettingsPage = ({ auth, family, onLogout, onUpdateFamily, userType }) => {
               {avatarEmoji}
             </div>
             <div className="flex-1">
-              <h2 className="font-bold text-gray-800 text-lg font-heading">{userName}</h2>
-              <p className="text-sm text-gray-500">
+              <h2 className="font-bold text-gray-800 dark:text-white text-lg font-heading">{userName}</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 {userType === "kid" ? `Grade ${auth?.currentKid?.grade}` : currentUser?.email}
               </p>
               {family?.is_premium && (
@@ -202,12 +202,12 @@ const SettingsPage = ({ auth, family, onLogout, onUpdateFamily, userType }) => {
         {/* Settings Sections */}
         <div className="space-y-3">
           {/* Account Section */}
-          <div className="card-playful">
-            <h3 className="font-bold text-gray-800 mb-3 font-heading text-sm uppercase tracking-wide">Account</h3>
+          <div className="card-playful dark:bg-gray-800 dark:border-gray-700">
+            <h3 className="font-bold text-gray-800 dark:text-white mb-3 font-heading text-sm uppercase tracking-wide">Account</h3>
             <div className="space-y-1">
               <button 
                 onClick={() => setShowProfileDialog(true)}
-                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left"
+                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
                 data-testid="profile-btn"
               >
                 <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
