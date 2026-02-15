@@ -22,7 +22,7 @@ import TaskApproval from "@/pages/TaskApproval";
 import ManageRewards from "@/pages/ManageRewards";
 import ManageKids from "@/pages/ManageKids";
 import PointsHistory from "@/pages/PointsHistory";
-import StudyTimer from "@/pages/StudyTimer";
+import DailyRewards from "@/pages/DailyRewards";
 import TypingPractice from "@/pages/TypingPractice";
 import Leaderboard from "@/pages/Leaderboard";
 import Badges from "@/pages/Badges";
