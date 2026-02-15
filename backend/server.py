@@ -2291,6 +2291,181 @@ async def change_password(family_id: str, data: PasswordChange):
     return {"message": "Password changed successfully"}
 
 
+# ============ DAILY REWARDS ROUTES ============
+
+@api_router.get("/daily-rewards/{kid_id}")
+async def get_daily_rewards(kid_id: str):
+    """Get daily reward status for a kid"""
+    kid = await db.kids.find_one({"id": kid_id}, {"_id": 0})
+    if not kid:
+        raise HTTPException(status_code=404, detail="Kid not found")
+    
+    # Get or create reward record
+    reward = await db.daily_rewards.find_one({"kid_id": kid_id}, {"_id": 0})
+    
+    today = datetime.now(timezone.utc).date().isoformat()
+    
+    if not reward:
+        reward = {
+            "kid_id": kid_id,
+            "current_streak": 0,
+            "last_claim_date": None,
+            "total_claimed": 0,
+            "can_claim_today": True
+        }
+    else:
+        # Check if already claimed today
+        last_claim = reward.get("last_claim_date")
+        can_claim = last_claim != today
+        reward["can_claim_today"] = can_claim
+        
+        # Check if streak should reset (missed a day)
+        if last_claim:
+            last_date = datetime.fromisoformat(last_claim).date()
+            today_date = datetime.now(timezone.utc).date()
+            days_diff = (today_date - last_date).days
+            
+            if days_diff > 1:
+                # Missed a day, reset streak
+                reward["current_streak"] = 0
+    
+    return reward
+
+@api_router.post("/daily-rewards/{kid_id}/claim")
+async def claim_daily_reward(kid_id: str):
+    """Claim daily reward for a kid"""
+    kid = await db.kids.find_one({"id": kid_id}, {"_id": 0})
+    if not kid:
+        raise HTTPException(status_code=404, detail="Kid not found")
+    
+    today = datetime.now(timezone.utc).date().isoformat()
+    
+    # Get or create reward record
+    reward = await db.daily_rewards.find_one({"kid_id": kid_id}, {"_id": 0})
+    
+    if not reward:
+        reward = {
+            "id": str(uuid.uuid4()),
+            "kid_id": kid_id,
+            "current_streak": 0,
+            "last_claim_date": None,
+            "total_claimed": 0
+        }
+        await db.daily_rewards.insert_one(reward)
+    
+    # Check if already claimed today
+    if reward.get("last_claim_date") == today:
+        raise HTTPException(status_code=400, detail="Already claimed today's reward")
+    
+    # Check if streak should reset
+    last_claim = reward.get("last_claim_date")
+    if last_claim:
+        last_date = datetime.fromisoformat(last_claim).date()
+        today_date = datetime.now(timezone.utc).date()
+        days_diff = (today_date - last_date).days
+        
+        if days_diff > 1:
+            reward["current_streak"] = 0
+    
+    # Calculate new streak (max 7)
+    new_streak = min((reward.get("current_streak", 0) + 1), 7)
+    
+    # Day rewards: 5, 10, 15, 20, 30, 40, 100
+    day_points = [5, 10, 15, 20, 30, 40, 100]
+    points_earned = day_points[new_streak - 1]
+    
+    # Update reward record
+    await db.daily_rewards.update_one(
+        {"kid_id": kid_id},
+        {"$set": {
+            "current_streak": new_streak if new_streak < 7 else 0,  # Reset after day 7
+            "last_claim_date": today,
+            "total_claimed": reward.get("total_claimed", 0) + points_earned
+        }}
+    )
+    
+    # Award points to kid
+    await db.kids.update_one(
+        {"id": kid_id},
+        {"$inc": {"points": points_earned}}
+    )
+    
+    return {
+        "current_streak": new_streak if new_streak < 7 else 0,
+        "last_claim_date": today,
+        "total_claimed": reward.get("total_claimed", 0) + points_earned,
+        "points_earned": points_earned,
+        "can_claim_today": False
+    }
+
+# ============ SUBJECT MASTERY ROUTES ============
+
+@api_router.get("/mastery/{kid_id}")
+async def get_subject_mastery(kid_id: str):
+    """Get subject mastery levels for a kid"""
+    kid = await db.kids.find_one({"id": kid_id}, {"_id": 0})
+    if not kid:
+        raise HTTPException(status_code=404, detail="Kid not found")
+    
+    # Get all completed tasks for this kid grouped by subject
+    pipeline = [
+        {"$match": {"kid_id": kid_id, "status": "approved"}},
+        {"$group": {
+            "_id": "$subject",
+            "completed_count": {"$sum": 1},
+            "total_points": {"$sum": "$points"}
+        }}
+    ]
+    
+    results = await db.tasks.aggregate(pipeline).to_list(100)
+    
+    # Calculate mastery level for each subject
+    # Bronze: 5 tasks, Silver: 15 tasks, Gold: 30 tasks, Master: 50 tasks
+    mastery_levels = []
+    for result in results:
+        subject = result["_id"]
+        count = result["completed_count"]
+        
+        if count >= 50:
+            level = "master"
+            progress = 100
+            next_level = None
+            tasks_needed = 0
+        elif count >= 30:
+            level = "gold"
+            progress = int((count - 30) / 20 * 100)
+            next_level = "master"
+            tasks_needed = 50 - count
+        elif count >= 15:
+            level = "silver"
+            progress = int((count - 15) / 15 * 100)
+            next_level = "gold"
+            tasks_needed = 30 - count
+        elif count >= 5:
+            level = "bronze"
+            progress = int((count - 5) / 10 * 100)
+            next_level = "silver"
+            tasks_needed = 15 - count
+        else:
+            level = "none"
+            progress = int(count / 5 * 100)
+            next_level = "bronze"
+            tasks_needed = 5 - count
+        
+        mastery_levels.append({
+            "subject": subject,
+            "level": level,
+            "completed_tasks": count,
+            "total_points": result["total_points"],
+            "progress_to_next": progress,
+            "next_level": next_level,
+            "tasks_needed": tasks_needed
+        })
+    
+    return {"mastery": mastery_levels}
+
+
+
 
 # Include the router in the main app
 app.include_router(api_router)
