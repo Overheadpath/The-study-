@@ -4,7 +4,7 @@ import { api } from "@/App";
 import { toast } from "sonner";
 import { 
   ArrowLeft, Target, Plus, Trophy, Clock, CheckCircle, 
-  Trash2, Users, Calendar
+  Trash2, Users, Calendar, Copy, Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 
 const WeeklyChallenges = ({ auth }) => {
   const navigate = useNavigate();
