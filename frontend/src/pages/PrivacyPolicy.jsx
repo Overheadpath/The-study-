@@ -92,13 +92,24 @@ const PrivacyPolicy = () => {
             </section>
 
             <section>
-              <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-3">6. Data Security</h2>
-              <p>
-                We implement appropriate security measures to protect your information, including:
-              </p>
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-3">6. Data Storage & Security</h2>
+              
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">6.1 Where Your Data is Stored</h3>
+              <p>Your data is stored securely using industry-standard cloud infrastructure:</p>
               <ul className="list-disc pl-6 space-y-1">
-                <li>Encrypted password storage</li>
-                <li>Secure HTTPS connections</li>
+                <li><strong>Database:</strong> MongoDB Atlas cloud database with encrypted storage</li>
+                <li><strong>Location:</strong> Data is stored in secure data centers (United States)</li>
+                <li><strong>Backups:</strong> Regular automated backups ensure data is not lost</li>
+                <li><strong>Media:</strong> Uploaded images (homework photos) are stored temporarily for processing and are not retained long-term</li>
+              </ul>
+
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2 mt-4">6.2 Security Measures</h3>
+              <p>We implement appropriate security measures to protect your information, including:</p>
+              <ul className="list-disc pl-6 space-y-1">
+                <li>Encrypted password storage (bcrypt hashing)</li>
+                <li>Secure HTTPS connections for all data transmission</li>
+                <li>JWT token-based authentication</li>
+                <li>Rate limiting to prevent abuse</li>
                 <li>Regular security assessments</li>
               </ul>
               <p className="mt-2">
