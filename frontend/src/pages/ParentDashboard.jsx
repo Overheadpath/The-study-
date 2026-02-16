@@ -120,10 +120,18 @@ const ParentDashboard = ({ auth }) => {
                   >
                     {kid.name.charAt(0)}
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <h3 className="font-bold text-gray-800 font-heading text-lg">{kid.name}</h3>
                     <p className="text-sm text-gray-500">Grade {kid.grade}</p>
                   </div>
+                  <button
+                    onClick={() => navigate(`/parent/progress/${kid.id}`)}
+                    className="p-2 bg-indigo-100 hover:bg-indigo-200 rounded-xl transition-colors"
+                    data-testid={`progress-report-${kid.id}`}
+                    title="View Progress Report"
+                  >
+                    <BarChart3 className="w-5 h-5 text-indigo-600" />
+                  </button>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="points-badge text-sm">
