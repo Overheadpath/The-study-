@@ -807,6 +807,383 @@ async def get_subscription_status(family_id: str):
     """Get subscription status for a family"""
     return await get_family_subscription_status(family_id)
 
+# ============ NEW USER SYSTEM (Username-based) ============
+
+@api_router.post("/users/register")
+async def register_user(data: UserRegister):
+    """Register a new user with username + password (no email required)"""
+    username_lower = data.username.lower().strip()
+    
+    # Check if username exists
+    existing = await db.users.find_one({"username": username_lower}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="Username already taken")
+    
+    # Check username format (alphanumeric, underscores, 3-20 chars)
+    import re
+    if not re.match(r'^[a-zA-Z0-9_]{3,20}$', data.username):
+        raise HTTPException(status_code=400, detail="Username must be 3-20 characters, letters, numbers, and underscores only")
+    
+    # Validate birthdate
+    try:
+        birth = datetime.strptime(data.birthdate, "%Y-%m-%d")
+        if birth > datetime.now():
+            raise HTTPException(status_code=400, detail="Invalid birthdate")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid birthdate format (use YYYY-MM-DD)")
+    
+    age = calculate_age(data.birthdate)
+    user_is_child = age < 13
+    
+    user = User(
+        username=username_lower,
+        password_hash=hash_password(data.password),
+        email=data.email.lower().strip() if data.email else None,
+        display_name=data.display_name,
+        birthdate=data.birthdate,
+        grade=data.grade,
+        avatar_emoji=data.avatar_emoji or "😊",
+        avatar_color=data.avatar_color or "#4F46E5",
+        is_parent=not user_is_child
+    )
+    
+    await db.users.insert_one(serialize_doc(user.model_dump()))
+    
+    # Get groups user belongs to
+    groups = await db.groups.find({"members": user.id}, {"_id": 0}).to_list(50)
+    group_ids = [g["id"] for g in groups]
+    
+    return {
+        "id": user.id,
+        "username": user.username,
+        "display_name": user.display_name,
+        "email": user.email,
+        "birthdate": user.birthdate,
+        "age": age,
+        "is_child": user_is_child,
+        "avatar_emoji": user.avatar_emoji,
+        "avatar_color": user.avatar_color,
+        "points": user.points,
+        "grade": user.grade,
+        "qr_invite_code": user.qr_invite_code,
+        "groups": group_ids
+    }
+
+@api_router.post("/users/login")
+async def login_user_new(data: UserLogin):
+    """Login with username + password"""
+    username_lower = data.username.lower().strip()
+    
+    user = await db.users.find_one({"username": username_lower}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    
+    if not verify_password(data.password, user.get("password_hash", "")):
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    
+    age = calculate_age(user.get("birthdate", "2000-01-01"))
+    user_is_child = age < 13
+    
+    # Get groups user belongs to
+    groups = await db.groups.find({"members": user["id"]}, {"_id": 0}).to_list(50)
+    group_ids = [g["id"] for g in groups]
+    
+    return {
+        "id": user["id"],
+        "username": user["username"],
+        "display_name": user.get("display_name", user["username"]),
+        "email": user.get("email"),
+        "birthdate": user.get("birthdate"),
+        "age": age,
+        "is_child": user_is_child,
+        "avatar_emoji": user.get("avatar_emoji", "😊"),
+        "avatar_color": user.get("avatar_color", "#4F46E5"),
+        "points": user.get("points", 0),
+        "grade": user.get("grade"),
+        "qr_invite_code": user.get("qr_invite_code"),
+        "groups": group_ids
+    }
+
+@api_router.get("/users/{user_id}")
+async def get_user(user_id: str):
+    """Get user info"""
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    age = calculate_age(user.get("birthdate", "2000-01-01"))
+    groups = await db.groups.find({"members": user_id}, {"_id": 0}).to_list(50)
+    
+    return {
+        "id": user["id"],
+        "username": user["username"],
+        "display_name": user.get("display_name", user["username"]),
+        "email": user.get("email"),
+        "birthdate": user.get("birthdate"),
+        "age": age,
+        "is_child": age < 13,
+        "avatar_emoji": user.get("avatar_emoji", "😊"),
+        "avatar_color": user.get("avatar_color", "#4F46E5"),
+        "points": user.get("points", 0),
+        "grade": user.get("grade"),
+        "qr_invite_code": user.get("qr_invite_code"),
+        "groups": [g["id"] for g in groups]
+    }
+
+@api_router.get("/users/check-username/{username}")
+async def check_username(username: str):
+    """Check if username is available"""
+    existing = await db.users.find_one({"username": username.lower().strip()}, {"_id": 0})
+    return {"available": existing is None, "username": username.lower().strip()}
+
+# ============ GROUPS (Family/Friends) ============
+
+@api_router.post("/groups")
+async def create_group(data: GroupCreate, user_id: str):
+    """Create a new group (family or friends)"""
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    group = Group(
+        name=data.name,
+        description=data.description or "",
+        owner_id=user_id,
+        members=[user_id],  # Creator is first member
+        group_type=data.group_type
+    )
+    
+    await db.groups.insert_one(serialize_doc(group.model_dump()))
+    
+    return {
+        "id": group.id,
+        "name": group.name,
+        "description": group.description,
+        "owner_id": group.owner_id,
+        "members": group.members,
+        "group_type": group.group_type,
+        "qr_invite_code": group.qr_invite_code
+    }
+
+@api_router.get("/groups")
+async def get_user_groups(user_id: str):
+    """Get all groups a user belongs to"""
+    groups = await db.groups.find({"members": user_id}, {"_id": 0}).to_list(50)
+    
+    result = []
+    for g in groups:
+        # Get member details
+        members = await db.users.find({"id": {"$in": g.get("members", [])}}, {"_id": 0, "id": 1, "display_name": 1, "avatar_emoji": 1, "points": 1}).to_list(50)
+        result.append({
+            "id": g["id"],
+            "name": g["name"],
+            "description": g.get("description", ""),
+            "owner_id": g["owner_id"],
+            "members": members,
+            "group_type": g.get("group_type", "family"),
+            "qr_invite_code": g.get("qr_invite_code"),
+            "is_owner": g["owner_id"] == user_id
+        })
+    
+    return result
+
+@api_router.get("/groups/{group_id}")
+async def get_group(group_id: str):
+    """Get group details"""
+    group = await db.groups.find_one({"id": group_id}, {"_id": 0})
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    members = await db.users.find({"id": {"$in": group.get("members", [])}}, {"_id": 0, "id": 1, "display_name": 1, "avatar_emoji": 1, "avatar_color": 1, "points": 1, "grade": 1}).to_list(50)
+    
+    return {
+        "id": group["id"],
+        "name": group["name"],
+        "description": group.get("description", ""),
+        "owner_id": group["owner_id"],
+        "members": members,
+        "group_type": group.get("group_type", "family"),
+        "qr_invite_code": group.get("qr_invite_code")
+    }
+
+# ============ GROUP INVITES ============
+
+@api_router.post("/groups/invite")
+async def invite_to_group(data: GroupInviteCreate, from_user_id: str):
+    """Invite a user to a group by username"""
+    # Get the inviter
+    from_user = await db.users.find_one({"id": from_user_id}, {"_id": 0})
+    if not from_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get the group
+    group = await db.groups.find_one({"id": data.group_id}, {"_id": 0})
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    # Check if inviter is a member
+    if from_user_id not in group.get("members", []):
+        raise HTTPException(status_code=403, detail="You must be a member to invite others")
+    
+    # Get the user to invite
+    to_user = await db.users.find_one({"username": data.to_username.lower().strip()}, {"_id": 0})
+    if not to_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if already a member
+    if to_user["id"] in group.get("members", []):
+        raise HTTPException(status_code=400, detail="User is already a member")
+    
+    # Check age groups - if different age groups, require QR code
+    from_is_child = is_child(from_user.get("birthdate", "2000-01-01"))
+    to_is_child = is_child(to_user.get("birthdate", "2000-01-01"))
+    requires_qr = from_is_child != to_is_child
+    
+    # If inviter is a child, they can ONLY use QR codes
+    if from_is_child:
+        raise HTTPException(status_code=403, detail="Users under 13 can only invite by scanning QR codes in person")
+    
+    # If target is a child, require QR code
+    if to_is_child:
+        raise HTTPException(status_code=403, detail="To invite users under 13, they must scan your group QR code in person")
+    
+    # Check for existing pending invite
+    existing = await db.group_invites.find_one({
+        "group_id": data.group_id,
+        "to_user_id": to_user["id"],
+        "status": "pending"
+    }, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="Invite already pending")
+    
+    invite = GroupInvite(
+        group_id=data.group_id,
+        group_name=group["name"],
+        from_user_id=from_user_id,
+        from_username=from_user["username"],
+        to_user_id=to_user["id"],
+        to_username=to_user["username"],
+        requires_qr=requires_qr
+    )
+    
+    await db.group_invites.insert_one(serialize_doc(invite.model_dump()))
+    
+    return {"message": "Invite sent", "invite_id": invite.id, "requires_qr": requires_qr}
+
+@api_router.get("/groups/invites/pending")
+async def get_pending_invites(user_id: str):
+    """Get pending invites for a user"""
+    invites = await db.group_invites.find({
+        "to_user_id": user_id,
+        "status": "pending"
+    }, {"_id": 0}).to_list(50)
+    
+    return invites
+
+@api_router.post("/groups/invites/{invite_id}/accept")
+async def accept_invite(invite_id: str, user_id: str):
+    """Accept a group invite"""
+    invite = await db.group_invites.find_one({"id": invite_id, "to_user_id": user_id}, {"_id": 0})
+    if not invite:
+        raise HTTPException(status_code=404, detail="Invite not found")
+    
+    if invite["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Invite already processed")
+    
+    # Add user to group
+    await db.groups.update_one(
+        {"id": invite["group_id"]},
+        {"$addToSet": {"members": user_id}}
+    )
+    
+    # Update invite status
+    await db.group_invites.update_one(
+        {"id": invite_id},
+        {"$set": {"status": "accepted"}}
+    )
+    
+    return {"message": "Joined group successfully"}
+
+@api_router.post("/groups/invites/{invite_id}/reject")
+async def reject_invite(invite_id: str, user_id: str):
+    """Reject a group invite"""
+    invite = await db.group_invites.find_one({"id": invite_id, "to_user_id": user_id}, {"_id": 0})
+    if not invite:
+        raise HTTPException(status_code=404, detail="Invite not found")
+    
+    await db.group_invites.update_one(
+        {"id": invite_id},
+        {"$set": {"status": "rejected"}}
+    )
+    
+    return {"message": "Invite rejected"}
+
+# ============ QR CODE JOIN (for kids and cross-age invites) ============
+
+@api_router.post("/groups/join-qr")
+async def join_group_by_qr(qr_code: str, user_id: str):
+    """Join a group by scanning QR code (required for kids and cross-age invites)"""
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Find group by QR code
+    group = await db.groups.find_one({"qr_invite_code": qr_code.upper().strip()}, {"_id": 0})
+    if not group:
+        raise HTTPException(status_code=404, detail="Invalid QR code")
+    
+    # Check if already a member
+    if user_id in group.get("members", []):
+        raise HTTPException(status_code=400, detail="Already a member of this group")
+    
+    # Add user to group
+    await db.groups.update_one(
+        {"id": group["id"]},
+        {"$addToSet": {"members": user_id}}
+    )
+    
+    return {
+        "message": "Joined group successfully",
+        "group_id": group["id"],
+        "group_name": group["name"]
+    }
+
+@api_router.get("/groups/{group_id}/qr-code")
+async def get_group_qr_code(group_id: str, user_id: str):
+    """Get QR code for a group (only members can get it)"""
+    group = await db.groups.find_one({"id": group_id}, {"_id": 0})
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    if user_id not in group.get("members", []):
+        raise HTTPException(status_code=403, detail="Not a member of this group")
+    
+    # Return the QR code string (frontend will generate the visual QR)
+    return {
+        "qr_code": group.get("qr_invite_code"),
+        "group_name": group["name"],
+        "group_id": group["id"]
+    }
+
+@api_router.post("/groups/{group_id}/regenerate-qr")
+async def regenerate_group_qr(group_id: str, user_id: str):
+    """Regenerate QR code for a group (owner only)"""
+    group = await db.groups.find_one({"id": group_id}, {"_id": 0})
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    if group["owner_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Only the group owner can regenerate the QR code")
+    
+    new_qr = ''.join(random.choices('ABCDEFGHJKLMNPQRSTUVWXYZ23456789', k=10))
+    
+    await db.groups.update_one(
+        {"id": group_id},
+        {"$set": {"qr_invite_code": new_qr}}
+    )
+    
+    return {"qr_code": new_qr, "message": "QR code regenerated"}
+
 # ============ STRIPE PAYMENT ROUTES ============
 
 @api_router.post("/subscription/checkout")
