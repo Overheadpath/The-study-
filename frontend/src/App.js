@@ -360,6 +360,16 @@ function App() {
             } 
           />
           <Route 
+            path="/student/scan" 
+            element={
+              auth.currentKid ? (
+                <HomeworkScanner auth={legacyAuth} />
+              ) : (
+                <Navigate to="/family" replace />
+              )
+            } 
+          />
+          <Route 
             path="/student/badges" 
             element={
               auth.currentKid ? (
