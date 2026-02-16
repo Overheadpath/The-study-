@@ -1,4 +1,4 @@
-const CACHE_NAME = 'study-helper-v3';
+const CACHE_NAME = 'study-helper-v4';
 const urlsToCache = [
   '/',
   '/index.html',
