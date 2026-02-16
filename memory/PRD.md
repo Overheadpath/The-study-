@@ -200,13 +200,32 @@ Allows two parent accounts to share a kid:
 - [ ] 3D avatars
 
 ## Last Updated
-February 16, 2026 - P1 Features Complete: Homework Photo Scanner (OCR), Parent Progress Reports UI, Multiple Challenges UI, Settings page fully functional
+February 16, 2026 - NEW: Username-based auth system (no email for kids), QR code group joining, age-based safety restrictions
 
 ## Important Notes for Deployment
 - **Google Play**: $25 one-time fee. Upload APK/AAB, updates are free and unlimited.
 - **Rewards**: Parents set and give rewards - the app only tracks points
 - **3D Characters**: NOT implemented - using 2D Kahoot-style emoji avatars
 - **Stripe**: Using test key. For real payments, user needs to create Stripe account and provide live key
+
+## NEW: Username-Based Authentication (Feb 16, 2026)
+- [x] All users can sign up with Username + Password (no email required)
+- [x] Email is OPTIONAL (for password recovery)
+- [x] Birthdate required to determine age group
+- [x] Under 13: Safety features enabled, can ONLY join groups via QR code scan
+- [x] 13+: Can invite users by username within same age group
+- [x] Cross-age invites require QR code scan (in-person verification)
+- [x] Groups: Create Family or Friends groups
+- [x] QR Code: Generate and share to let others join
+- [x] Old email-based login preserved at /login for backward compatibility
+
+## Routes
+- /new-register - New username-based registration (3-step form)
+- /new-login - New username-based login
+- /dashboard - New user dashboard with groups
+- /join-group - Join group via QR code or manual code entry
+- /login - Old email-based login (backward compatibility)
+- /register - Old email-based registration (backward compatibility)
 
 ## Legal Pages (NEW - Feb 16, 2026)
 - [x] Privacy Policy page at /privacy-policy
