@@ -30,6 +30,8 @@ import WeeklyChallenges from "@/pages/WeeklyChallenges";
 import PaymentSuccess from "@/pages/PaymentSuccess";
 import Certificates from "@/pages/Certificates";
 import SettingsPage from "@/pages/SettingsPage";
+import HomeworkScanner from "@/pages/HomeworkScanner";
+import ProgressReport from "@/pages/ProgressReport";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
