@@ -153,6 +153,14 @@ const LandingPage = () => {
           </Button>
         </div>
 
+        <p className="text-sm text-gray-500 mb-4">
+          No credit card required • Free plan available forever
+        </p>
+        
+        <p className="text-xs text-gray-400 mb-8">
+          Sign up with just a username - no email required for kids!
+        </p>
+
         {/* Install App Banner (Mobile) */}
         {showInstallPrompt && (
           <div className="sm:hidden mb-6">
@@ -166,10 +174,6 @@ const LandingPage = () => {
             </Button>
           </div>
         )}
-
-        <p className="text-sm text-gray-500 mb-8">
-          No credit card required • Free plan available forever
-        </p>
 
         {/* Supported Curriculums */}
         <div className="flex flex-wrap justify-center gap-3">
