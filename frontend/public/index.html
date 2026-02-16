@@ -57,8 +57,7 @@
                     navigator.serviceWorker.register('/service-worker.js')
                         .then(function(registration) {
                             console.log('ServiceWorker registration successful');
-                            // Check for updates
-                            registration.update();
+                            // Don't auto-update on every page load - let it happen naturally
                         })
                         .catch(function(err) {
                             console.log('ServiceWorker registration failed: ', err);
