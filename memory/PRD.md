@@ -181,21 +181,23 @@ Allows two parent accounts to share a kid:
 
 ## Prioritized Backlog
 
-### P0 (Next Up)
-- [ ] Homework Photo Scanner - AI reads text from homework photos
-- [ ] Parent Progress Reports - Weekly email summaries
+### P0 (Completed)
+- [x] Homework Photo Scanner - AI reads text from homework photos (GPT-4o OCR)
+- [x] Parent Progress Reports - Weekly progress UI with stats
+- [x] Multiple Challenges - Parents create multiple challenges at once
+- [x] Settings Notifications - Email notification toggle
 
 ### P1 (Important)
-- [ ] Multiple Challenges - Parents create multiple challenges at once
 - [ ] Password reset via email
 - [ ] Email notifications for share requests
-- [ ] Progress reports
+- [ ] Send progress report via email (requires email service integration)
 
 ### P2 (Nice to Have)
 - [ ] Face ID/Fingerprint login
 - [ ] Multi-language UI
 - [ ] PDF export
 - [ ] Push notifications
+- [ ] 3D avatars
 
 ## Last Updated
 February 16, 2026 - P1 Features Complete: Homework Photo Scanner (OCR), Parent Progress Reports UI, Multiple Challenges UI, Settings page fully functional
