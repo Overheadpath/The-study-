@@ -2490,6 +2490,335 @@ async def get_subject_mastery(kid_id: str):
     
     return {"mastery": mastery_levels}
 
+# ============ HOMEWORK PHOTO SCANNER ============
+
+class HomeworkScanRequest(BaseModel):
+    kid_id: str
+    image_base64: str
+    subject: Optional[str] = None
+
+class HomeworkScanResponse(BaseModel):
+    extracted_text: str
+    suggested_task: Optional[dict] = None
+    explanation: Optional[str] = None
+
+@api_router.post("/homework/scan")
+async def scan_homework(data: HomeworkScanRequest):
+    """Scan homework photo, extract text, create task, and provide explanation"""
+    kid = await db.kids.find_one({"id": data.kid_id}, {"_id": 0})
+    if not kid:
+        raise HTTPException(status_code=404, detail="Kid not found")
+    
+    # Rate limiting check
+    if not check_rate_limit(data.kid_id, "ai_question"):
+        raise HTTPException(status_code=429, detail="Please wait a few seconds before scanning again")
+    
+    try:
+        chat = LlmChat(api_key=EMERGENT_LLM_KEY)
+        
+        # First, extract text from the image
+        extraction_prompt = """Look at this homework image and extract all the text/questions you can see.
+        Format your response as:
+        EXTRACTED TEXT:
+        [list all questions/problems you see]
+        
+        SUBJECT: [identify the subject - Math, English, Science, etc.]
+        
+        ESTIMATED TIME: [estimate how long this homework would take in minutes]"""
+        
+        messages = [UserMessage(
+            content=extraction_prompt,
+            images=[f"data:image/jpeg;base64,{data.image_base64}"]
+        )]
+        
+        extraction_response = await chat.send_async("gpt-4o", messages)
+        extracted_text = extraction_response.content
+        
+        # Parse subject from response
+        subject = data.subject or "General"
+        if "SUBJECT:" in extracted_text:
+            try:
+                subject_line = [l for l in extracted_text.split('\n') if 'SUBJECT:' in l][0]
+                subject = subject_line.split('SUBJECT:')[1].strip()
+            except:
+                pass
+        
+        # Parse estimated time
+        estimated_time = 30  # default
+        if "ESTIMATED TIME:" in extracted_text:
+            try:
+                time_line = [l for l in extracted_text.split('\n') if 'ESTIMATED TIME:' in l][0]
+                time_str = time_line.split('ESTIMATED TIME:')[1].strip()
+                # Extract number from string
+                import re
+                numbers = re.findall(r'\d+', time_str)
+                if numbers:
+                    estimated_time = int(numbers[0])
+            except:
+                pass
+        
+        # Now get an explanation/help for the homework (Socratic method for kids)
+        explanation_prompt = f"""A Grade {kid.get('grade', 5)} student needs help understanding this homework.
+        
+        The extracted homework is:
+        {extracted_text}
+        
+        Provide a helpful explanation that:
+        1. Explains the KEY CONCEPTS needed to solve this
+        2. Gives HINTS on how to approach each problem
+        3. Does NOT give direct answers (use Socratic method)
+        4. Uses simple language appropriate for Grade {kid.get('grade', 5)}
+        5. Encourages the student
+        
+        Keep it friendly and encouraging!"""
+        
+        explanation_messages = [UserMessage(content=explanation_prompt)]
+        explanation_response = await chat.send_async("gpt-4o-mini", explanation_messages)
+        explanation = explanation_response.content
+        
+        # Create a suggested task
+        suggested_task = {
+            "title": f"{subject} Homework",
+            "description": extracted_text[:500] if len(extracted_text) > 500 else extracted_text,
+            "subject": subject,
+            "estimated_points": min(max(estimated_time // 10, 5), 50),  # 5-50 points based on time
+            "estimated_minutes": estimated_time
+        }
+        
+        return {
+            "extracted_text": extracted_text,
+            "suggested_task": suggested_task,
+            "explanation": explanation
+        }
+        
+    except Exception as e:
+        logger.error(f"Homework scan error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to scan homework: {str(e)}")
+
+@api_router.post("/homework/create-task")
+async def create_task_from_scan(kid_id: str, title: str, description: str, subject: str, points: int = 10):
+    """Create a task from scanned homework"""
+    kid = await db.kids.find_one({"id": kid_id}, {"_id": 0})
+    if not kid:
+        raise HTTPException(status_code=404, detail="Kid not found")
+    
+    # Rate limiting
+    if not check_rate_limit(kid_id, "task_submit"):
+        raise HTTPException(status_code=429, detail="Please wait before submitting another task")
+    
+    task = {
+        "id": str(uuid.uuid4()),
+        "kid_id": kid_id,
+        "family_id": kid.get("family_id"),
+        "title": title,
+        "description": description,
+        "subject": subject,
+        "points": points,
+        "status": "pending",
+        "source": "photo_scan",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.tasks.insert_one(task)
+    
+    return {"message": "Task created successfully", "task_id": task["id"]}
+
+# ============ MULTIPLE CHALLENGES ============
+
+class ChallengeCreate(BaseModel):
+    title: str
+    description: str
+    target_type: str  # "tasks", "points", "streak"
+    target_value: int
+    reward_points: int
+    end_date: str
+    kid_ids: List[str]  # Can assign to multiple kids
+
+@api_router.post("/challenges/bulk-create")
+async def create_multiple_challenges(family_id: str, challenges: List[ChallengeCreate]):
+    """Create multiple challenges at once"""
+    family = await db.families.find_one({"id": family_id}, {"_id": 0})
+    if not family:
+        raise HTTPException(status_code=404, detail="Family not found")
+    
+    created_challenges = []
+    
+    for challenge_data in challenges:
+        # Create a challenge for each kid
+        for kid_id in challenge_data.kid_ids:
+            kid = await db.kids.find_one({"id": kid_id}, {"_id": 0})
+            if not kid:
+                continue
+                
+            challenge = {
+                "id": str(uuid.uuid4()),
+                "family_id": family_id,
+                "kid_id": kid_id,
+                "kid_name": kid.get("name", ""),
+                "title": challenge_data.title,
+                "description": challenge_data.description,
+                "target_type": challenge_data.target_type,
+                "target_value": challenge_data.target_value,
+                "current_value": 0,
+                "reward_points": challenge_data.reward_points,
+                "status": "active",
+                "start_date": datetime.now(timezone.utc).isoformat(),
+                "end_date": challenge_data.end_date,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            await db.challenges.insert_one(challenge)
+            created_challenges.append(challenge)
+    
+    return {
+        "message": f"Created {len(created_challenges)} challenges",
+        "challenges": created_challenges
+    }
+
+# ============ PARENT PROGRESS REPORTS ============
+
+@api_router.get("/progress-report/{kid_id}")
+async def get_progress_report(kid_id: str, days: int = 7):
+    """Get comprehensive progress report for a kid"""
+    kid = await db.kids.find_one({"id": kid_id}, {"_id": 0})
+    if not kid:
+        raise HTTPException(status_code=404, detail="Kid not found")
+    
+    # Calculate date range
+    end_date = datetime.now(timezone.utc)
+    start_date = end_date - timedelta(days=days)
+    start_iso = start_date.isoformat()
+    
+    # Get completed tasks in period
+    tasks = await db.tasks.find({
+        "kid_id": kid_id,
+        "status": "approved",
+        "created_at": {"$gte": start_iso}
+    }, {"_id": 0}).to_list(100)
+    
+    # Calculate stats
+    total_tasks = len(tasks)
+    total_points = sum(t.get("points", 0) for t in tasks)
+    
+    # Group by subject
+    subject_stats = {}
+    for task in tasks:
+        subject = task.get("subject", "General")
+        if subject not in subject_stats:
+            subject_stats[subject] = {"count": 0, "points": 0}
+        subject_stats[subject]["count"] += 1
+        subject_stats[subject]["points"] += task.get("points", 0)
+    
+    # Get streak info
+    streak = await db.streaks.find_one({"kid_id": kid_id}, {"_id": 0})
+    current_streak = streak.get("current_streak", 0) if streak else 0
+    max_streak = streak.get("max_streak", 0) if streak else 0
+    
+    # Get badges earned in period
+    badges = await db.badges.find({
+        "kid_id": kid_id,
+        "earned_at": {"$gte": start_iso}
+    }, {"_id": 0}).to_list(100)
+    
+    # Get daily rewards claimed
+    daily_rewards = await db.daily_rewards.find_one({"kid_id": kid_id}, {"_id": 0})
+    rewards_streak = daily_rewards.get("current_streak", 0) if daily_rewards else 0
+    total_bonus_points = daily_rewards.get("total_claimed", 0) if daily_rewards else 0
+    
+    # Get challenges progress
+    challenges = await db.challenges.find({
+        "kid_id": kid_id,
+        "status": {"$in": ["active", "completed"]}
+    }, {"_id": 0}).to_list(50)
+    
+    completed_challenges = len([c for c in challenges if c.get("status") == "completed"])
+    active_challenges = len([c for c in challenges if c.get("status") == "active"])
+    
+    # Get mastery levels
+    mastery_data = await get_subject_mastery(kid_id)
+    
+    # Calculate overall grade/score
+    performance_score = min(100, (total_tasks * 5) + (current_streak * 2) + (len(badges) * 10))
+    
+    if performance_score >= 90:
+        grade = "A+"
+        feedback = "Outstanding work! Keep it up! 🌟"
+    elif performance_score >= 80:
+        grade = "A"
+        feedback = "Excellent progress! You're doing great! 🎉"
+    elif performance_score >= 70:
+        grade = "B"
+        feedback = "Good job! Keep pushing forward! 💪"
+    elif performance_score >= 60:
+        grade = "C"
+        feedback = "Nice effort! Let's aim higher next week! 📈"
+    else:
+        grade = "D"
+        feedback = "Let's work together to improve! You can do it! 🤗"
+    
+    return {
+        "kid_name": kid.get("name"),
+        "period": f"Last {days} days",
+        "report_date": datetime.now(timezone.utc).isoformat(),
+        
+        "summary": {
+            "performance_score": performance_score,
+            "grade": grade,
+            "feedback": feedback,
+            "total_points_earned": total_points,
+            "current_total_points": kid.get("points", 0)
+        },
+        
+        "tasks": {
+            "completed": total_tasks,
+            "by_subject": subject_stats
+        },
+        
+        "streaks": {
+            "current": current_streak,
+            "max": max_streak,
+            "daily_rewards_streak": rewards_streak
+        },
+        
+        "achievements": {
+            "badges_earned": len(badges),
+            "badge_names": [b.get("name") for b in badges],
+            "challenges_completed": completed_challenges,
+            "challenges_active": active_challenges
+        },
+        
+        "mastery": mastery_data.get("mastery", []),
+        
+        "bonus_points": {
+            "from_daily_rewards": total_bonus_points,
+            "from_badges": len(badges) * 10,
+            "from_challenges": completed_challenges * 25
+        },
+        
+        "recommendations": [
+            f"Focus on {min(subject_stats.items(), key=lambda x: x[1]['count'])[0] if subject_stats else 'any subject'} to improve balance" if subject_stats else "Start completing homework tasks!",
+            "Keep the streak going!" if current_streak > 0 else "Try to study every day to build a streak!",
+            "Claim daily rewards for bonus points!" if rewards_streak < 3 else "Great job claiming daily rewards!"
+        ]
+    }
+
+@api_router.post("/progress-report/{kid_id}/send-email")
+async def send_progress_report_email(kid_id: str, email: str):
+    """Send progress report to parent email (placeholder - would need email service)"""
+    # Get the report
+    report = await get_progress_report(kid_id, 7)
+    
+    # In a real implementation, you would send an email here
+    # For now, we'll just return the report data
+    
+    return {
+        "message": "Progress report generated (email sending requires email service integration)",
+        "report": report,
+        "email": email
+    }
+
+
+
 
 
 
