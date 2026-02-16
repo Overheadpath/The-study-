@@ -422,6 +422,16 @@ function App() {
             } 
           />
           <Route 
+            path="/parent/progress/:kidId" 
+            element={
+              auth.family || auth.mode === "parent" ? (
+                <ProgressReport auth={legacyAuth} />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            } 
+          />
+          <Route 
             path="/parent/approve" 
             element={
               auth.family || auth.mode === "parent" ? (
