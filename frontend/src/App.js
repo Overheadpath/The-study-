@@ -32,6 +32,8 @@ import Certificates from "@/pages/Certificates";
 import SettingsPage from "@/pages/SettingsPage";
 import HomeworkScanner from "@/pages/HomeworkScanner";
 import ProgressReport from "@/pages/ProgressReport";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsOfService from "@/pages/TermsOfService";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
@@ -516,6 +518,10 @@ function App() {
               )
             } 
           />
+
+          {/* Legal Pages (Public) */}
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />

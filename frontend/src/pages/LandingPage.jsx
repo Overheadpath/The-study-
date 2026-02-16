@@ -404,6 +404,26 @@ const LandingPage = () => {
       <footer className="bg-white border-t border-gray-100 py-8">
         <div className="max-w-6xl mx-auto px-6 text-center">
           <p className="text-gray-500 text-sm">© 2026 Study Helper. Made with ❤️ for families worldwide.</p>
+          
+          {/* Legal Links */}
+          <div className="flex items-center justify-center gap-6 mt-4">
+            <button 
+              onClick={() => navigate("/privacy-policy")}
+              className="text-sm text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
+              data-testid="footer-privacy-link"
+            >
+              Privacy Policy
+            </button>
+            <span className="text-gray-300">|</span>
+            <button 
+              onClick={() => navigate("/terms-of-service")}
+              className="text-sm text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
+              data-testid="footer-terms-link"
+            >
+              Terms of Service
+            </button>
+          </div>
+          
           <p className="text-gray-400 text-xs mt-4 max-w-2xl mx-auto">
             <strong>Disclaimer:</strong> Study Helper is a homework tracking tool. All rewards are created, approved, and fulfilled entirely by parents. 
             Study Helper does not provide, guarantee, or have any responsibility for rewards. Points have no monetary value outside this app.
