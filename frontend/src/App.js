@@ -191,6 +191,26 @@ export const useAuth = () => {
 
 function App() {
   const auth = useAuth();
+  
+  // New user system state
+  const [newUser, setNewUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem("studyhelper_user");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const handleNewUserLogin = (userData) => {
+    setNewUser(userData);
+    localStorage.setItem("studyhelper_user", JSON.stringify(userData));
+  };
+
+  const handleNewUserLogout = () => {
+    setNewUser(null);
+    localStorage.removeItem("studyhelper_user");
+  };
 
   // Show loading while checking auth state
   if (auth.isLoading) {
@@ -221,6 +241,46 @@ function App() {
     <div className="min-h-screen bg-[#FDFBF7]">
       <BrowserRouter>
         <Routes>
+          {/* NEW USER SYSTEM ROUTES */}
+          <Route 
+            path="/new-register" 
+            element={
+              newUser ? (
+                <Navigate to="/dashboard" replace />
+              ) : (
+                <NewRegisterPage onRegister={handleNewUserLogin} />
+              )
+            } 
+          />
+          <Route 
+            path="/new-login" 
+            element={
+              newUser ? (
+                <Navigate to="/dashboard" replace />
+              ) : (
+                <NewLoginPage onLogin={handleNewUserLogin} />
+              )
+            } 
+          />
+          <Route 
+            path="/dashboard" 
+            element={
+              newUser ? (
+                <UserDashboard 
+                  user={newUser} 
+                  onLogout={handleNewUserLogout}
+                  onUpdateUser={handleNewUserLogin}
+                />
+              ) : (
+                <Navigate to="/new-login" replace />
+              )
+            } 
+          />
+          <Route 
+            path="/join-group" 
+            element={<JoinGroupPage user={newUser} />} 
+          />
+
           {/* Public routes - redirect if already logged in */}
           <Route 
             path="/" 
