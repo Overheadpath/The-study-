@@ -427,6 +427,108 @@ class PinVerifyResponse(BaseModel):
     kid_name: Optional[str] = None
     family_id: Optional[str] = None
 
+# ============ NEW USER SYSTEM MODELS (Username-based) ============
+
+class User(BaseModel):
+    """Universal user model - works for both kids and adults"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    username: str  # Required, unique
+    password_hash: str
+    email: Optional[str] = None  # Optional, for password recovery
+    display_name: str  # Shown to others
+    birthdate: str  # YYYY-MM-DD format
+    avatar_emoji: str = "😊"
+    avatar_color: str = "#4F46E5"
+    points: int = 0
+    grade: Optional[int] = None  # For students
+    is_parent: bool = False  # Calculated from age
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    # QR code for invites
+    qr_invite_code: str = Field(default_factory=lambda: ''.join(random.choices('ABCDEFGHJKLMNPQRSTUVWXYZ23456789', k=12)))
+
+class UserRegister(BaseModel):
+    username: str
+    password: str
+    display_name: str
+    birthdate: str  # YYYY-MM-DD
+    email: Optional[str] = None  # Optional
+    grade: Optional[int] = None
+    avatar_emoji: Optional[str] = "😊"
+    avatar_color: Optional[str] = "#4F46E5"
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+class UserResponse(BaseModel):
+    id: str
+    username: str
+    display_name: str
+    email: Optional[str] = None
+    birthdate: str
+    age: int
+    is_child: bool  # Under 13
+    avatar_emoji: str
+    avatar_color: str
+    points: int
+    grade: Optional[int] = None
+    qr_invite_code: str
+    groups: List[str] = []  # Group IDs user belongs to
+
+class Group(BaseModel):
+    """Family or Friend group"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: str = ""
+    owner_id: str  # User who created the group
+    members: List[str] = []  # User IDs
+    group_type: str = "family"  # "family" or "friends"
+    qr_invite_code: str = Field(default_factory=lambda: ''.join(random.choices('ABCDEFGHJKLMNPQRSTUVWXYZ23456789', k=10)))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class GroupCreate(BaseModel):
+    name: str
+    description: Optional[str] = ""
+    group_type: str = "family"  # "family" or "friends"
+
+class GroupInvite(BaseModel):
+    """Pending invite to join a group"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    group_id: str
+    group_name: str
+    from_user_id: str
+    from_username: str
+    to_user_id: str
+    to_username: str
+    status: str = "pending"  # pending, accepted, rejected
+    requires_qr: bool = False  # True if cross-age-group invite
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class GroupInviteCreate(BaseModel):
+    group_id: str
+    to_username: str  # Username to invite
+
+def calculate_age(birthdate: str) -> int:
+    """Calculate age from birthdate string (YYYY-MM-DD)"""
+    try:
+        birth = datetime.strptime(birthdate, "%Y-%m-%d")
+        today = datetime.now()
+        age = today.year - birth.year - ((today.month, today.day) < (birth.month, birth.day))
+        return age
+    except:
+        return 0
+
+def is_child(birthdate: str) -> bool:
+    """Check if user is under 13 (child)"""
+    return calculate_age(birthdate) < 13
+
+def is_same_age_group(birthdate1: str, birthdate2: str) -> bool:
+    """Check if two users are in the same age group (both kids or both 13+)"""
+    return is_child(birthdate1) == is_child(birthdate2)
+
 # ============ HELPER FUNCTIONS ============
 
 def serialize_datetime(obj):
