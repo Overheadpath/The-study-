@@ -40,11 +40,11 @@ const LandingPage = () => {
   };
 
   const features = [
-    { icon: BookOpen, title: "AI Homework Helper", desc: "Guides learning with Socratic method - never gives direct answers" },
-    { icon: Trophy, title: "Rewards System", desc: "Earn points for completed work, redeem for real rewards" },
-    { icon: Clock, title: "Study Timer", desc: "Track focus time with Pomodoro-style sessions" },
+    { icon: BookOpen, title: "AI Homework Helper", desc: "Guides learning with hints - never gives direct answers" },
+    { icon: Trophy, title: "Parent-Set Rewards", desc: "Kids earn points, parents choose the real rewards to give" },
+    { icon: Star, title: "Daily Login Bonus", desc: "Earn bonus points for logging in every day" },
     { icon: Keyboard, title: "Typing Practice", desc: "Improve typing speed and accuracy with fun exercises" },
-    { icon: Award, title: "Badges & Achievements", desc: "Unlock badges for subject mastery and streaks" },
+    { icon: Award, title: "Badges & Mastery", desc: "Unlock badges and master subjects over time" },
     { icon: Users, title: "Family Leaderboard", desc: "Friendly competition between siblings" },
   ];
 
