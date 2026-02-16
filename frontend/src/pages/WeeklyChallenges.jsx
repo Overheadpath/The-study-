@@ -109,6 +109,60 @@ const WeeklyChallenges = ({ auth }) => {
     }
   };
 
+  const handleCreateMultiple = async () => {
+    const validChallenges = multipleForm.filter(c => c.title && c.deadline);
+    if (validChallenges.length === 0) {
+      toast.error("Please fill in at least one challenge");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Create each challenge
+      for (const challenge of validChallenges) {
+        await api.post("/challenges", {
+          ...challenge,
+          target_kid_id: challenge.target_kid_id || null
+        });
+      }
+      toast.success(`${validChallenges.length} challenges created!`);
+      setShowAddDialog(false);
+      setMultipleForm([{ title: "", description: "", points_reward: 25, target_kid_id: "", deadline: "" }]);
+      fetchData();
+    } catch (error) {
+      console.error("Failed to create:", error);
+      toast.error("Failed to create challenges");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addMultipleRow = () => {
+    setMultipleForm([...multipleForm, { title: "", description: "", points_reward: 25, target_kid_id: "", deadline: "" }]);
+  };
+
+  const removeMultipleRow = (index) => {
+    if (multipleForm.length > 1) {
+      setMultipleForm(multipleForm.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateMultipleRow = (index, field, value) => {
+    const updated = [...multipleForm];
+    updated[index] = { ...updated[index], [field]: value };
+    setMultipleForm(updated);
+  };
+
+  const applyTemplate = (template, index) => {
+    if (createMode === "single") {
+      setForm({ ...form, ...template });
+    } else {
+      const updated = [...multipleForm];
+      updated[index] = { ...updated[index], ...template };
+      setMultipleForm(updated);
+    }
+  };
+
   const handleComplete = async (challengeId) => {
     try {
       const response = await api.post(`/challenges/${challengeId}/complete?kid_id=${auth.currentKid.id}`);
