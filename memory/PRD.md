@@ -198,10 +198,22 @@ Allows two parent accounts to share a kid:
 - [ ] Push notifications
 
 ## Last Updated
-February 16, 2026 - FINAL VERSION: Added Homework Scanner, Progress Reports, Multiple Challenges, Anti-cheat, clarified parent-set rewards
+February 16, 2026 - Fixed preview page routing, linked Privacy Policy & Terms of Service in footer, enhanced Privacy Policy with data storage details, created Bug Testing Plan
 
 ## Important Notes for Deployment
 - **Google Play**: $25 one-time fee. Upload APK/AAB, updates are free and unlimited.
 - **Rewards**: Parents set and give rewards - the app only tracks points
 - **3D Characters**: NOT implemented - using 2D Kahoot-style emoji avatars
 - **Stripe**: Using test key. For real payments, user needs to create Stripe account and provide live key
+
+## Legal Pages (NEW - Feb 16, 2026)
+- [x] Privacy Policy page at /privacy-policy
+- [x] Terms of Service page at /terms-of-service
+- [x] Footer links on landing page
+- [x] Data storage information (MongoDB Atlas, US data centers)
+- [x] Bug Testing Plan document created
+
+## Testing Phase Documents
+- `/app/memory/BUG_TESTING_PLAN.md` - Comprehensive testing guide for testers
+- `/app/memory/PRIVACY_POLICY.md` - Privacy policy content
+- `/app/memory/TERMS_OF_SERVICE.md` - Terms of service content
