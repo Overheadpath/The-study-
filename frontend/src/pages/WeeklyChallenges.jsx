@@ -335,93 +335,238 @@ const WeeklyChallenges = ({ auth }) => {
 
       {/* Add Challenge Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-heading text-xl flex items-center gap-2">
               <Target className="w-6 h-6 text-purple-500" />
-              New Challenge
+              Create Challenges
             </DialogTitle>
             <DialogDescription>
-              Create a challenge for your kids to complete
+              Create one or multiple challenges for your kids
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 py-4">
-            <div>
-              <label className="text-sm font-semibold text-gray-700 mb-1 block">Title *</label>
-              <Input
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="e.g., Read for 30 minutes"
-              />
-            </div>
+          <Tabs value={createMode} onValueChange={setCreateMode} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="single">Single Challenge</TabsTrigger>
+              <TabsTrigger value="multiple">Multiple Challenges</TabsTrigger>
+            </TabsList>
             
-            <div>
-              <label className="text-sm font-semibold text-gray-700 mb-1 block">Description</label>
-              <Textarea
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="Describe the challenge..."
-                rows={2}
-                className="resize-none"
-              />
-            </div>
-            
-            <div>
-              <label className="text-sm font-semibold text-gray-700 mb-1 block">Points Reward *</label>
-              <Input
-                type="number"
-                value={form.points_reward}
-                onChange={(e) => setForm({ ...form, points_reward: parseInt(e.target.value) || 0 })}
-                min={1}
-                max={100}
-              />
-            </div>
-            
-            <div>
-              <label className="text-sm font-semibold text-gray-700 mb-1 block">For Who?</label>
-              <Select 
-                value={form.target_kid_id || "all"} 
-                onValueChange={(value) => setForm({ ...form, target_kid_id: value === "all" ? "" : value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Everyone" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Everyone</SelectItem>
-                  {kids.map((kid) => (
-                    <SelectItem key={kid.id} value={kid.id}>
-                      {kid.name}
-                    </SelectItem>
+            {/* Single Challenge Tab */}
+            <TabsContent value="single" className="space-y-4">
+              {/* Quick Templates */}
+              <div>
+                <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  Quick Templates
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {challengeTemplates.slice(0, 4).map((template, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => applyTemplate(template, 0)}
+                      className="text-xs px-3 py-1.5 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors"
+                    >
+                      {template.title}
+                    </button>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <label className="text-sm font-semibold text-gray-700 mb-1 block">Deadline *</label>
-              <Input
-                type="date"
-                value={form.deadline}
-                onChange={(e) => setForm({ ...form, deadline: e.target.value })}
-                min={new Date().toISOString().split('T')[0]}
-              />
-            </div>
-          </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 block">Title *</label>
+                <Input
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  placeholder="e.g., Read for 30 minutes"
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 block">Description</label>
+                <Textarea
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  placeholder="Describe the challenge..."
+                  rows={2}
+                  className="resize-none"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 block">Points Reward *</label>
+                  <Input
+                    type="number"
+                    value={form.points_reward}
+                    onChange={(e) => setForm({ ...form, points_reward: parseInt(e.target.value) || 0 })}
+                    min={1}
+                    max={100}
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 block">For Who?</label>
+                  <Select 
+                    value={form.target_kid_id || "all"} 
+                    onValueChange={(value) => setForm({ ...form, target_kid_id: value === "all" ? "" : value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Everyone" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Everyone</SelectItem>
+                      {kids.map((kid) => (
+                        <SelectItem key={kid.id} value={kid.id}>
+                          {kid.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 block">Deadline *</label>
+                <Input
+                  type="date"
+                  value={form.deadline}
+                  onChange={(e) => setForm({ ...form, deadline: e.target.value })}
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+            </TabsContent>
+
+            {/* Multiple Challenges Tab */}
+            <TabsContent value="multiple" className="space-y-4">
+              {/* Quick Templates */}
+              <div>
+                <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  Add from templates
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {challengeTemplates.map((template, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        // Add a new row with this template
+                        const newRow = { 
+                          ...template, 
+                          target_kid_id: "", 
+                          deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] 
+                        };
+                        setMultipleForm([...multipleForm, newRow]);
+                      }}
+                      className="text-xs px-3 py-1.5 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors flex items-center gap-1"
+                    >
+                      <Plus className="w-3 h-3" />
+                      {template.title}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Challenge Rows */}
+              <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-2">
+                {multipleForm.map((row, index) => (
+                  <div key={index} className="p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/50 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Challenge #{index + 1}</span>
+                      {multipleForm.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeMultipleRow(index)}
+                          className="text-red-500 hover:text-red-700 p-1"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        value={row.title}
+                        onChange={(e) => updateMultipleRow(index, "title", e.target.value)}
+                        placeholder="Title *"
+                        className="text-sm"
+                      />
+                      <Input
+                        type="number"
+                        value={row.points_reward}
+                        onChange={(e) => updateMultipleRow(index, "points_reward", parseInt(e.target.value) || 0)}
+                        placeholder="Points"
+                        min={1}
+                        max={100}
+                        className="text-sm"
+                      />
+                    </div>
+                    
+                    <Input
+                      value={row.description}
+                      onChange={(e) => updateMultipleRow(index, "description", e.target.value)}
+                      placeholder="Description (optional)"
+                      className="text-sm"
+                    />
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <Select 
+                        value={row.target_kid_id || "all"} 
+                        onValueChange={(value) => updateMultipleRow(index, "target_kid_id", value === "all" ? "" : value)}
+                      >
+                        <SelectTrigger className="text-sm">
+                          <SelectValue placeholder="For who?" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Everyone</SelectItem>
+                          {kids.map((kid) => (
+                            <SelectItem key={kid.id} value={kid.id}>
+                              {kid.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        type="date"
+                        value={row.deadline}
+                        onChange={(e) => updateMultipleRow(index, "deadline", e.target.value)}
+                        min={new Date().toISOString().split('T')[0]}
+                        className="text-sm"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addMultipleRow}
+                className="w-full"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Another Challenge
+              </Button>
+            </TabsContent>
+          </Tabs>
           
-          <DialogFooter>
+          <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>
               Cancel
             </Button>
             <Button 
-              onClick={handleCreate}
+              onClick={createMode === "single" ? handleCreate : handleCreateMultiple}
               disabled={saving}
               className="bg-purple-600 hover:bg-purple-700"
             >
               {saving ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-              ) : (
+              ) : createMode === "single" ? (
                 "Create Challenge"
+              ) : (
+                `Create ${multipleForm.filter(c => c.title && c.deadline).length} Challenges`
               )}
             </Button>
           </DialogFooter>
