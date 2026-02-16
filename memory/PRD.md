@@ -198,4 +198,10 @@ Allows two parent accounts to share a kid:
 - [ ] Push notifications
 
 ## Last Updated
-February 15, 2026 - Replaced Study Timer with Daily Rewards, added Dark Mode, fixed dialog visibility, added Subject Mastery
+February 16, 2026 - FINAL VERSION: Added Homework Scanner, Progress Reports, Multiple Challenges, Anti-cheat, clarified parent-set rewards
+
+## Important Notes for Deployment
+- **Google Play**: $25 one-time fee. Upload APK/AAB, updates are free and unlimited.
+- **Rewards**: Parents set and give rewards - the app only tracks points
+- **3D Characters**: NOT implemented - using 2D Kahoot-style emoji avatars
+- **Stripe**: Using test key. For real payments, user needs to create Stripe account and provide live key
