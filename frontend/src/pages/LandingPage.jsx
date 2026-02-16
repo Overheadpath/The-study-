@@ -370,18 +370,46 @@ const LandingPage = () => {
         </div>
       </section>
 
+      {/* How It Works Section */}
+      <section className="max-w-4xl mx-auto px-6 py-16 bg-gray-50 rounded-3xl mx-6 mb-16">
+        <h2 className="text-2xl font-bold text-gray-800 text-center mb-8 font-heading">
+          How It Works
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="text-center p-4">
+            <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <span className="text-xl font-bold text-indigo-600">1</span>
+            </div>
+            <h3 className="font-bold text-gray-800 mb-2">Kids Complete Tasks</h3>
+            <p className="text-sm text-gray-600">Submit homework manually or scan with AI. Tasks can be tracked in-app.</p>
+          </div>
+          <div className="text-center p-4">
+            <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <span className="text-xl font-bold text-amber-600">2</span>
+            </div>
+            <h3 className="font-bold text-gray-800 mb-2">Parents Approve & Award</h3>
+            <p className="text-sm text-gray-600">Parents review completed work and approve points. Parents set all rewards.</p>
+          </div>
+          <div className="text-center p-4">
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <span className="text-xl font-bold text-green-600">3</span>
+            </div>
+            <h3 className="font-bold text-gray-800 mb-2">Parents Give Rewards</h3>
+            <p className="text-sm text-gray-600">When kids redeem points, parents fulfill the reward they created.</p>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="bg-white border-t border-gray-100 py-8">
-        <div className="max-w-6xl mx-auto px-6 text-center text-gray-500 text-sm">
-          <p>© 2026 Study Helper. Made with ❤️ for families worldwide.</p>
-          <p className="mt-2">Supporting {CURRICULUMS.length}+ curriculums globally</p>
+        <div className="max-w-6xl mx-auto px-6 text-center">
+          <p className="text-gray-500 text-sm">© 2026 Study Helper. Made with ❤️ for families worldwide.</p>
+          <p className="text-gray-400 text-xs mt-4 max-w-2xl mx-auto">
+            <strong>Disclaimer:</strong> Study Helper is a homework tracking tool. All rewards are created, approved, and fulfilled entirely by parents. 
+            Study Helper does not provide, guarantee, or have any responsibility for rewards. Points have no monetary value outside this app.
+          </p>
         </div>
       </footer>
-
-      {/* Simple Ad Banner for demo - would be real ads in production */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gray-100 border-t border-gray-200 py-2 px-4 text-center text-sm text-gray-500">
-        <span className="opacity-50">Ad Space - Partner with educational brands</span>
-      </div>
     </div>
   );
 };
