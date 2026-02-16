@@ -242,11 +242,11 @@ const WeeklyChallenges = ({ auth }) => {
       <main className="max-w-3xl mx-auto px-6 py-8">
         {challenges.length === 0 ? (
           <div className="text-center py-12 animate-fade-in">
-            <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="w-20 h-20 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
               <Target className="w-10 h-10 text-purple-500" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2 font-heading">No Challenges Yet</h2>
-            <p className="text-gray-500">
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2 font-heading">No Challenges Yet</h2>
+            <p className="text-gray-500 dark:text-gray-400">
               {isParent 
                 ? "Create a challenge to motivate your kids!" 
                 : "Ask your parent to create some challenges!"}
@@ -260,36 +260,36 @@ const WeeklyChallenges = ({ auth }) => {
               return (
                 <div 
                   key={challenge.id}
-                  className={`card-playful animate-fade-in ${
+                  className={`card-playful dark:bg-gray-800 dark:border-gray-700 animate-fade-in ${
                     completed 
-                      ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200' 
-                      : 'hover:border-purple-300'
+                      ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800' 
+                      : 'hover:border-purple-300 dark:hover:border-purple-600'
                   }`}
                 >
                   <div className="flex items-start gap-4">
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
                       completed 
-                        ? 'bg-green-100' 
-                        : 'bg-purple-100'
+                        ? 'bg-green-100 dark:bg-green-900/30' 
+                        : 'bg-purple-100 dark:bg-purple-900/30'
                     }`}>
                       {completed ? (
-                        <CheckCircle className="w-6 h-6 text-green-600" />
+                        <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
                       ) : (
-                        <Target className="w-6 h-6 text-purple-600" />
+                        <Target className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                       )}
                     </div>
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-bold text-gray-800 font-heading">{challenge.title}</h3>
+                        <h3 className="font-bold text-gray-800 dark:text-white font-heading">{challenge.title}</h3>
                         {completed && (
-                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                          <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full">
                             Completed!
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-600 mb-2">{challenge.description}</p>
-                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{challenge.description}</p>
+                      <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
                         <span className="flex items-center gap-1">
                           <Trophy className="w-3 h-3 text-amber-500" />
                           {challenge.points_reward} points
