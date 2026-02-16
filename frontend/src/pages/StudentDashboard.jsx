@@ -195,6 +195,17 @@ const StudentDashboard = ({ auth }) => {
           </button>
 
           <button
+            data-testid="scan-homework-btn"
+            onClick={() => navigate("/student/scan")}
+            className="card-playful flex flex-col items-center gap-2 py-5 hover:border-blue-300 animate-fade-in"
+          >
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl flex items-center justify-center">
+              <Camera className="w-6 h-6 text-white" />
+            </div>
+            <span className="font-bold text-gray-800 font-heading">Scan Homework</span>
+          </button>
+
+          <button
             data-testid="ai-tutor-btn"
             onClick={() => navigate("/student/tutor")}
             className="card-playful flex flex-col items-center gap-2 py-5 hover:border-emerald-300 animate-fade-in"
