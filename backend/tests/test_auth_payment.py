@@ -209,7 +209,7 @@ class TestStripeCheckout:
         family_id = login_response.json()["id"]
         
         # Create checkout session
-        origin_url = "https://learn-earn-18.preview.emergentagent.com"
+        origin_url = "https://rewards-hub-46.preview.emergentagent.com"
         response = requests.post(
             f"{BASE_URL}/api/subscription/checkout?family_id={family_id}&origin_url={origin_url}"
         )
@@ -232,7 +232,7 @@ class TestStripeCheckout:
     
     def test_checkout_nonexistent_family(self):
         """Test checkout for non-existent family fails"""
-        origin_url = "https://learn-earn-18.preview.emergentagent.com"
+        origin_url = "https://rewards-hub-46.preview.emergentagent.com"
         response = requests.post(
             f"{BASE_URL}/api/subscription/checkout?family_id=nonexistent-id&origin_url={origin_url}"
         )
