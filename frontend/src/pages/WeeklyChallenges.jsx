@@ -38,6 +38,7 @@ const WeeklyChallenges = ({ auth }) => {
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [createMode, setCreateMode] = useState("single"); // "single" or "multiple"
   
   const [form, setForm] = useState({
     title: "",
@@ -46,6 +47,21 @@ const WeeklyChallenges = ({ auth }) => {
     target_kid_id: "",
     deadline: ""
   });
+
+  // Multiple challenges form
+  const [multipleForm, setMultipleForm] = useState([
+    { title: "", description: "", points_reward: 25, target_kid_id: "", deadline: "" }
+  ]);
+
+  // Challenge templates for quick creation
+  const challengeTemplates = [
+    { title: "Read for 30 minutes", description: "Read any book for 30 minutes", points_reward: 15 },
+    { title: "Complete 5 math problems", description: "Solve 5 math exercises", points_reward: 20 },
+    { title: "Write a short story", description: "Write a creative story (at least 100 words)", points_reward: 30 },
+    { title: "Help with chores", description: "Help around the house today", points_reward: 15 },
+    { title: "No screen time for 2 hours", description: "Take a break from screens for 2 hours", points_reward: 25 },
+    { title: "Practice spelling words", description: "Practice this week's spelling words", points_reward: 15 },
+  ];
 
   // Check if user is a parent - either by mode or by checking if accessed via /parent/ route
   const isParent = auth.mode === "parent" || window.location.pathname.startsWith("/parent");
