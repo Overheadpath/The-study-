@@ -35,6 +35,12 @@ import ProgressReport from "@/pages/ProgressReport";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsOfService from "@/pages/TermsOfService";
 
+// New User System Pages
+import NewRegisterPage from "@/pages/NewRegisterPage";
+import NewLoginPage from "@/pages/NewLoginPage";
+import UserDashboard from "@/pages/UserDashboard";
+import JoinGroupPage from "@/pages/JoinGroupPage";
+
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
 
