@@ -7,6 +7,7 @@ import os
 import logging
 import random
 import io
+import time
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict
@@ -16,6 +17,7 @@ from emergentintegrations.llm.chat import LlmChat, UserMessage
 from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
 import base64
 import hashlib
+from collections import defaultdict
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -44,6 +46,30 @@ ADMIN_EMAILS = [
 def is_admin_email(email: str) -> bool:
     """Check if email is an admin email (case-insensitive)"""
     return email.lower() in [e.lower() for e in ADMIN_EMAILS]
+
+# ============ ANTI-CHEAT RATE LIMITING ============
+# Store last request timestamps per user/endpoint
+rate_limit_store = defaultdict(lambda: defaultdict(float))
+
+# Rate limits per endpoint (seconds between requests)
+RATE_LIMITS = {
+    "daily_rewards_claim": 5,  # 5 seconds between claims
+    "task_submit": 10,  # 10 seconds between task submissions
+    "typing_practice": 2,  # 2 seconds between typing submissions
+    "ai_question": 3,  # 3 seconds between AI questions
+}
+
+def check_rate_limit(user_id: str, action: str) -> bool:
+    """Check if user is rate limited. Returns True if allowed, False if blocked."""
+    limit = RATE_LIMITS.get(action, 1)
+    last_request = rate_limit_store[user_id][action]
+    now = time.time()
+    
+    if now - last_request < limit:
+        return False
+    
+    rate_limit_store[user_id][action] = now
+    return True
 
 # Create the main app
 app = FastAPI()
