@@ -89,7 +89,7 @@ const RewardShop = ({ auth }) => {
               </div>
               <div>
                 <h1 className="font-bold text-gray-800 font-heading">Reward Shop</h1>
-                <p className="text-xs text-gray-500">Spend your points!</p>
+                <p className="text-xs text-gray-500">Rewards set by your parents!</p>
               </div>
             </div>
           </div>
