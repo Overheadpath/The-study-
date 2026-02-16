@@ -125,9 +125,14 @@ const LandingPage = () => {
           </span>
         </h1>
         
-        <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-          The AI-powered study app where kids earn points for completing homework, 
-          and parents choose the real-world rewards to give them!
+        <p className="text-xl text-gray-600 mb-4 max-w-3xl mx-auto">
+          An app that <strong>incentivizes homework</strong> by letting kids earn points for completing tasks. 
+          Parents create custom rewards, approve completed work, and decide what rewards to give.
+        </p>
+        
+        <p className="text-base text-gray-500 mb-8 max-w-2xl mx-auto">
+          Tasks can be scanned with AI or entered manually. All rewards are set and fulfilled by parents — 
+          Study Helper simply tracks progress and points.
         </p>
         
         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
