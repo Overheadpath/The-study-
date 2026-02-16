@@ -115,7 +115,7 @@ const LandingPage = () => {
       <section className="max-w-6xl mx-auto px-6 py-20 text-center">
         <div className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 px-4 py-2 rounded-full text-sm font-semibold mb-6">
           <Globe className="w-4 h-4" />
-          Works with Any Curriculum Worldwide
+          Personalized for Every Learner
         </div>
         
         <h1 className="text-5xl md:text-6xl font-bold text-gray-800 mb-6 font-heading leading-tight">
@@ -126,8 +126,8 @@ const LandingPage = () => {
         </h1>
         
         <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-          The AI-powered study app that helps kids learn, earn points for their work, 
-          and redeem rewards. Perfect for any school curriculum!
+          The AI-powered study app where kids earn points for completing homework, 
+          and parents choose the real-world rewards to give them!
         </p>
         
         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
