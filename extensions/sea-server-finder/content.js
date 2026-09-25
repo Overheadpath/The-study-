@@ -205,6 +205,7 @@
     locating: false,
     sort: "ping",
     minFree: 1,
+    minPlayers: 5, // skip near-empty servers: there's nobody to PvP there
     scanSize: 300,
     status: "",
     statusKind: "",
@@ -247,7 +248,7 @@
     .tab:hover { background: #2c2f33; }
     .tab.on { background: #335fff; border-color: #335fff; color: #fff; }
     .custom { display: flex; gap: 6px; padding: 0 16px 10px; }
-    .controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 0 16px 10px; }
+    .controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 0 16px 10px; }
     label.f { display: flex; flex-direction: column; gap: 4px; color: #9aa0a6; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
     select, input {
       background: #232527; color: #e8eaec; border: 1px solid #3a3d45; border-radius: 8px;
@@ -294,6 +295,7 @@
     .more, .empty { padding: 12px 16px; color: #9aa0a6; font-size: 12px; }
     .hidden { display: none !important; }
     @media (max-width: 480px) {
+      .controls { grid-template-columns: 1fr 1fr; }
       th, td { padding-left: 4px; padding-right: 4px; }
       th:first-child, td:first-child { padding-left: 12px; }
       th:last-child, td:last-child { padding-right: 12px; }
@@ -331,6 +333,7 @@
     h("option", { value: "space" }, "Most space")
   );
   const minFreeInput = h("input", { type: "number", min: "0", max: "50", value: "1" });
+  const minPlayersInput = h("input", { type: "number", min: "0", max: "50", value: "5" });
   const scanSel = h(
     "select",
     {},
@@ -361,7 +364,8 @@
       "div",
       { class: "controls" },
       h("label", { class: "f" }, "Sort by", sortSel),
-      h("label", { class: "f" }, "Free slots ≥", minFreeInput),
+      h("label", { class: "f", title: "Hide servers with fewer players than this" }, "Players ≥", minPlayersInput),
+      h("label", { class: "f", title: "Hide servers with fewer open spots than this" }, "Free slots ≥", minFreeInput),
       h("label", { class: "f" }, "Scan", scanSel)
     ),
     h("div", { class: "actions" }, scanBtn, locateBtn),
@@ -407,7 +411,10 @@
 
   function sorted() {
     const minFree = Math.max(0, Number(state.minFree) || 0);
-    const rows = state.servers.filter((s) => s.maxPlayers - s.playing >= minFree);
+    const minPlayers = Math.max(0, Number(state.minPlayers) || 0);
+    const rows = state.servers.filter(
+      (s) => s.maxPlayers - s.playing >= minFree && s.playing >= minPlayers
+    );
     const nullsLast = (a, b) => (a == null) - (b == null) || (a ?? 0) - (b ?? 0);
     const by = {
       ping: (a, b) => nullsLast(a.ping, b.ping),
@@ -427,7 +434,7 @@
       return;
     }
     if (!rows.length) {
-      listEl.replaceChildren(h("div", { class: "empty" }, "No servers match. Lower “Free slots”."));
+      listEl.replaceChildren(h("div", { class: "empty" }, "No servers match. Lower “Players” or “Free slots”."));
       return;
     }
     const shown = rows.slice(0, SHOW_ROWS);
@@ -647,6 +654,10 @@
   locateBtn.addEventListener("click", locate);
   sortSel.addEventListener("change", () => {
     state.sort = sortSel.value;
+    renderList();
+  });
+  minPlayersInput.addEventListener("input", () => {
+    state.minPlayers = minPlayersInput.value;
     renderList();
   });
   minFreeInput.addEventListener("input", () => {

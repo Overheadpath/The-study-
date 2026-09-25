@@ -27,6 +27,10 @@ server list never shows.
    game's own server join (Blox Fruits has one in-game). This is the way to go
    when a game blocks joining a Sea straight from the website.
 
+**No empty servers:** the **Players ≥** box (5 by default) hides servers with
+fewer players than that, so you always land somewhere with people to PvP. Set
+it to 0 to see every server.
+
 Other games work too: open their page, or type any place ID into the box.
 
 ## What the numbers mean
