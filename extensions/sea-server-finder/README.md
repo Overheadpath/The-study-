@@ -22,8 +22,10 @@ server list never shows.
    **Your est.** column then shows roughly what *your* ping would be, based on
    the distance from you. Sort by **Your est. ping** to get the closest first.
    Press it again to check the next 15.
-5. Press **Join** to open Roblox straight into that server, or **Link** to copy
-   a link you can send to a friend.
+5. Press **Join** to open Roblox straight into that server.
+6. Or press **Copy ID** to copy the server's **Job ID**, then paste it into the
+   game's own server join (Blox Fruits has one in-game). This is the way to go
+   when a game blocks joining a Sea straight from the website.
 
 Other games work too: open their page, or type any place ID into the box.
 
@@ -39,7 +41,7 @@ Other games work too: open their page, or type any place ID into the box.
 
 - **Joining a Sea directly** only works if the game allows it. If Blox Fruits
   blocks it, **Check locations** will say so and **Join** may put you in the
-  First Sea instead.
+  First Sea instead. Use **Copy ID** and the in-game server join instead.
 - **Rate limits:** Roblox slows down anyone who asks for too many servers. If
   you see "rate-limiting", wait a minute.
 - **Privacy:** to find a server's address the extension asks Roblox the same

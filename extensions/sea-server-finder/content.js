@@ -289,7 +289,7 @@
       font-weight: 700; font-size: 12px; cursor: pointer;
     }
     .join:hover { background: #00c77e; }
-    .copy { background: none; border: 0; color: #9aa0a6; cursor: pointer; font-size: 12px; padding: 4px 6px; border-radius: 6px; margin-right: 2px; }
+    .copy { background: #232527; border: 1px solid #3a3d45; color: #cfd3d7; cursor: pointer; font-size: 12px; font-weight: 600; padding: 5px 8px; border-radius: 8px; margin-right: 4px; }
     .copy:hover { color: #fff; background: #2a2d31; }
     .more, .empty { padding: 12px 16px; color: #9aa0a6; font-size: 12px; }
     .hidden { display: none !important; }
@@ -297,8 +297,8 @@
       th, td { padding-left: 4px; padding-right: 4px; }
       th:first-child, td:first-child { padding-left: 12px; }
       th:last-child, td:last-child { padding-right: 12px; }
-      .loc { max-width: 64px; }
-      .copy { display: none; }
+      .loc { display: none; }
+      th.loc-h { display: none; }
       .ping, td { font-size: 12px; }
       .join { padding: 6px 9px; }
     }
@@ -442,7 +442,11 @@
         h(
           "td",
           {},
-          h("button", { class: "copy", title: "Copy a link to this server", onclick: () => copyLink(s) }, "Link"),
+          h(
+            "button",
+            { class: "copy", title: "Copy this server's Job ID, to paste into the game's own server join", onclick: () => copyJobId(s) },
+            "Copy ID"
+          ),
           h("button", { class: "join", onclick: () => join(s) }, "Join")
         )
       )
@@ -459,7 +463,7 @@
           h("th", { title: "Average ping of the players already in the server (from Roblox)" }, "Ping"),
           h("th", { title: "Estimated ping from your location, after “Check locations”" }, "Your est."),
           h("th", {}, "Players"),
-          h("th", {}, "Location"),
+          h("th", { class: "loc-h" }, "Location"),
           h("th", {}, "")
         )
       ),
@@ -604,13 +608,14 @@
     setStatus("Opening Roblox… (allow the browser to open it if it asks)", "ok");
   }
 
-  async function copyLink(s) {
-    const link = `https://www.roblox.com/games/start?placeId=${state.placeId}&gameInstanceId=${s.id}`;
+  // Games like Blox Fruits let you join a server from inside the game by
+  // pasting its Job ID, which also works where direct joining is blocked.
+  async function copyJobId(s) {
     try {
-      await navigator.clipboard.writeText(link);
-      setStatus("Server link copied. Paste it in your browser to join, or send it to a friend.", "ok");
+      await navigator.clipboard.writeText(s.id);
+      setStatus("Job ID copied. In the game, open its server join and paste it (Ctrl+V).", "ok");
     } catch (_) {
-      setStatus(link);
+      setStatus("Job ID: " + s.id);
     }
   }
 
