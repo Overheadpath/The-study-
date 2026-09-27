@@ -120,6 +120,29 @@ test('analyze: typed hand shows the four analysis panels and the right play', as
   await page.close();
 });
 
+test('analyze: a sample screenshot is read and its cards feed the analysis', async () => {
+  const { page, errors } = await openPage('analyze');
+  const short = { Ace: 'A', King: 'K', Queen: 'Q', Jack: 'J' };
+  const rankOf = (label) => {
+    const word = label.split(' ')[0];
+    return short[word] || word;
+  };
+  for (let i = 0; i < 3; i += 1) {
+    await page.click('button:has-text("Try a sample screenshot")');
+    await page.waitForSelector('.detect-item');
+    const note = await page.textContent('p:has-text("The cards actually drawn were")');
+    const [, playerText, upText] = note.match(/were (.+) vs (\S+)\.$/);
+    await page.click('button:has-text("Use these cards")');
+    const entered = await page.$$eval('.entry-hand .card', (els) => els.map((e) => e.getAttribute('aria-label')));
+    const up = await page.getAttribute('.picker .row-wrap .card', 'aria-label');
+    assert.deepEqual(entered.map(rankOf).sort(), playerText.split(', ').sort());
+    assert.equal(rankOf(up), upText);
+    assert.match(await page.textContent('#analysis-results'), /Basic-strategy play/);
+  }
+  assert.deepEqual(errors, []);
+  await page.close();
+});
+
 test('rules change the chart: H17 doubles 11 against an ace', async () => {
   const { page } = await openPage('rules');
   await page.click('.rule-card:has-text("Dealer on soft 17") button:has-text("Stands (S17)")');

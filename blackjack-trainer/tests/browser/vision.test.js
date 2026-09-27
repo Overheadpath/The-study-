@@ -60,7 +60,7 @@ test('reads JPEG-compressed, rescaled screenshots (0.6x - 1.5x)', async (t) => {
   summarize(t, 'JPEG q0.7 + rescale', res);
   const s = res.totals;
   assert.ok(s.correct / s.total >= 0.9, `rank+role accuracy ${pct(s.correct, s.total)} < 90%`);
-  assert.ok(s.spurious / s.total <= 0.025, `spurious detections ${pct(s.spurious, s.total)} > 2.5%`);
+  assert.ok(s.spurious / s.total <= 0.02, `spurious detections ${pct(s.spurious, s.total)} > 2%`);
 });
 
 test('high-confidence readings are reliable', async () => {
@@ -69,6 +69,72 @@ test('high-confidence readings are reliable', async () => {
   const wrong = confident.filter((c) => !c.ok).length;
   assert.ok(confident.length > 0.8 * res.confidences.length, 'most cards should be read with confidence >= 0.8');
   assert.ok(wrong / confident.length <= 0.01, `${wrong} of ${confident.length} confident readings were wrong`);
+});
+
+test('decks with the suit beside the rank, or no suit in the corner, are still read', async (t) => {
+  const row = await runBatch({ count: 3, seed: 404, jpegQuality: 0.8, scaleRange: [0.8, 1.2], overrides: { indexLayout: 'row' } });
+  summarize(t, 'suit beside rank', row);
+  assert.ok(row.totals.correct / row.totals.total >= 0.9, `row layout accuracy ${pct(row.totals.correct, row.totals.total)}`);
+  assert.ok(row.totals.spurious / row.totals.total <= 0.03);
+  const bare = await runBatch({ count: 3, seed: 505, jpegQuality: 0.8, scaleRange: [0.8, 1.2], overrides: { indexLayout: 'rank' } });
+  summarize(t, 'rank only', bare);
+  assert.ok(bare.totals.correct / bare.totals.total >= 0.85, `rank-only accuracy ${pct(bare.totals.correct, bare.totals.total)}`);
+  assert.ok(bare.totals.spurious / bare.totals.total <= 0.03);
+  // Rank-only readings are flagged for checking.
+  assert.ok(bare.confidences.every((c) => c.confidence <= 0.6));
+});
+
+test('cards dimmed behind a pop-up dialog are still read', async (t) => {
+  const res = await runBatch({ count: 3, seed: 606, jpegQuality: 0.8, scaleRange: [0.8, 1.2], overrides: { dialog: 'INSURANCE?' } });
+  summarize(t, 'dimmed by dialog', res);
+  assert.ok(res.totals.correct / res.totals.total >= 0.9, `dimmed accuracy ${pct(res.totals.correct, res.totals.total)}`);
+  assert.ok(res.totals.spurious / res.totals.total <= 0.03, 'dialog text must not become cards');
+});
+
+test('text, charts and UI elements are not mistaken for cards', async () => {
+  const res = await page.evaluate(async () => {
+    const { detectCards } = await import('/src/vision/detector.js');
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const read = () => detectCards(ctx.getImageData(0, 0, canvas.width, canvas.height)).cards.map((c) => c.rank);
+    const out = {};
+    // A rules panel with ranks and suit symbols in running text.
+    canvas.width = 1280;
+    canvas.height = 720;
+    ctx.fillStyle = '#123';
+    ctx.fillRect(0, 0, 1280, 720);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(200, 100, 880, 520);
+    ctx.fillStyle = '#111';
+    ctx.font = 'bold 44px Georgia, serif';
+    ctx.fillText('BLACKJACK RULES', 240, 170);
+    ctx.font = '22px Georgia, serif';
+    ['Dealer stands on soft 17. Blackjack pays 3 to 2.', 'A counts 1 or 11; K, Q and J count 10.', '2 3 4 5 6 7 8 9 10 J Q K A', 'Hand history: A\u2660 K\u2665  10\u2666 6\u2663']
+      .forEach((line, i) => ctx.fillText(line, 240, 240 + i * 60));
+    out.rules = read();
+    // A basic-strategy chart: coloured cells with dark labels.
+    canvas.width = 1000;
+    canvas.height = 700;
+    ctx.fillStyle = '#f7f7f7';
+    ctx.fillRect(0, 0, 1000, 700);
+    ctx.font = 'bold 18px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const heads = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A'];
+    for (let j = -1; j < 14; j++) {
+      for (let i = -1; i < 10; i++) {
+        ctx.fillStyle = i < 0 || j < 0 ? '#dddddd' : ['#e57373', '#fff59d', '#81c784', '#64b5f6'][(i * 7 + j * 3) % 4];
+        ctx.fillRect(100 + i * 80, 64 + j * 44, 76, 40);
+        ctx.fillStyle = '#222';
+        const label = j < 0 ? (heads[i] || '') : i < 0 ? String(8 + j) : 'HSDP'[(i * 7 + j * 3) % 4];
+        ctx.fillText(label, 138 + i * 80, 84 + j * 44);
+      }
+    }
+    out.chart = read();
+    return out;
+  });
+  assert.deepEqual(res.rules, []);
+  assert.deepEqual(res.chart, []);
 });
 
 test('an image without face-up cards returns no cards and a note', async () => {

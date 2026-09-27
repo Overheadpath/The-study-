@@ -117,8 +117,11 @@ export function createAnalyzeView(ctx) {
         suit: c.suit,
         box: c.box,
         confidence: c.confidence,
-        role: c.role === 'dealer' ? 'dealer' : c.role === 'player' && (c.handIndex || 0) > 0 ? 'other' : 'player',
+        // 'unknown' marks size outliers such as a hand-history strip: past rounds were
+        // reshuffled, so those cards are not out of the current shoe.
+        role: c.role === 'dealer' ? 'dealer' : c.role === 'unknown' ? 'ignore' : (c.handIndex || 0) > 0 ? 'other' : 'player',
         handIndex: c.handIndex || 0,
+        alternatives: Array.isArray(c.alternatives) ? c.alternatives.filter((r) => r !== c.rank) : [],
       }));
       const notes = [...(result.notes || [])];
       if (items.some((x) => x.role === 'other')) notes.push('Cards from another hand are marked "Other visible card": they are left out of your hand but still removed from the shoe in the probabilities. Change the roles to analyze that hand instead.');
@@ -315,6 +318,14 @@ export function createAnalyzeView(ctx) {
           [['dealer', 'Dealer up card'], ['player', 'My hand'], ['other', 'Other visible card'], ['ignore', 'Ignore']].map(([v, t]) => h('option', { value: v, selected: v === item.role }, t)),
         ),
         h('span', { class: `pill${item.confidence >= 0.8 ? ' good' : ''}` }, item.confidence >= 0.8 ? 'Confident' : 'Please check'),
+        item.confidence < 0.8 && item.alternatives.length
+          ? h(
+              'span',
+              { class: 'row-wrap', style: { gap: '4px' } },
+              h('span', { class: 'muted', style: { fontSize: '12.5px' } }, 'Could be'),
+              item.alternatives.map((r) => h('button', { type: 'button', class: 'btn small', 'aria-label': `Change card ${i + 1} to ${r}`, onClick: () => { item.alternatives = [item.rank, ...item.alternatives.filter((x) => x !== r)]; item.rank = r; render(); } }, r)),
+            )
+          : null,
       ),
     );
     const notes = shot.notes.map((n) => h('p', { class: 'callout warn' }, n));
@@ -452,11 +463,22 @@ export function createAnalyzeView(ctx) {
 
   document.addEventListener('paste', onPaste);
 
+  // Build the card-reading templates in idle time so the first screenshot reads faster.
+  let warmed = false;
+  function warmUpReader() {
+    if (warmed) return;
+    warmed = true;
+    const run = () => import('../vision/detector.js').then((v) => v.warmUp()).catch(() => {});
+    if (typeof requestIdleCallback === 'function') requestIdleCallback(run, { timeout: 3000 });
+    else setTimeout(run, 800);
+  }
+
   return {
     el,
     title: 'Analyze a hand',
     show() {
       render();
+      warmUpReader();
     },
     refresh() {
       render();

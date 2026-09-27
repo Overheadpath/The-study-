@@ -37,9 +37,10 @@ The app stores settings and history in `localStorage` in your browser only.
 ## Tests
 
 ```bash
-npm test             # unit tests (node:test): engine, charts, rounds, stats, explanations
-npm install          # once, for Playwright
-npm run test:browser # end-to-end UI tests and screenshot-reader tests in headless Chromium
+npm test             # 79 unit tests (node:test): engine, charts, rounds, stats, explanations
+npm install          # once, for Playwright and esbuild
+npm run test:browser # 17 end-to-end UI and screenshot-reader tests in headless Chromium
+npm run build        # dist/blackjack-strategy-lab.html: the whole app in one file that opens without a server
 ```
 
 ## How the math works
@@ -62,7 +63,29 @@ npm test
 
 ## Screenshot reading
 
-`src/vision/` reads cards from a screenshot on-device, and the image is never uploaded. It finds white card faces, extracts the ink inside them, matches rank glyphs against templates rendered at run time in several font styles, and treats a rank as a card only when a suit symbol sits directly below it. Cards are then grouped into hands, with the dealer at the top and the player below. Recognition is heuristic, so the app always shows the detections over the image and lets you correct each rank and role before analyzing. "Try a sample screenshot" renders a synthetic table to demonstrate the feature.
+`src/vision/` reads cards from a screenshot on-device, and the image is never uploaded. The pipeline:
+
+1. Finds the white card faces.
+2. Extracts the ink printed on them.
+3. Classifies rank and suit glyphs against templates rendered at run time in many font styles.
+4. Accepts a rank as a card index when the matching suit symbol sits below it (or beside it on decks that print it that way). The upside-down corner indices and the centre pips are therefore not counted.
+5. Groups the cards into hands: the dealer's at the top, yours below (split hands side by side). Stray cards, such as a hand-history strip, are left out.
+
+The app draws each detection over the image and lets you change any rank or role before analyzing. Cards read with low confidence are flagged and come with the reader's next-best guesses. "Try a sample screenshot" renders a synthetic table to demonstrate the feature.
+
+Measured by `tests/browser/vision.test.js` on synthetic tables in 8 visual styles (rank and hand assignment both correct):
+
+| Condition | Cards | Read correctly | False detections |
+| --- | --- | --- | --- |
+| Clean screenshots | 474 | 100% | 0 |
+| JPEG-compressed and rescaled 0.6x–1.5x | 455 | 100% | 0 |
+| Suit printed beside the rank | 147 | 100% | 0 |
+| No suit in the card corner | 148 | 99.3% | 0 |
+| Table dimmed behind a pop-up dialog | 151 | 100% | 0 |
+
+Rules text, strategy charts and on-screen buttons are not read as cards. A 1920x1080 screenshot takes well under a second in Chromium.
+
+Limitations: screenshots of digital card faces only. Photos or live-dealer video of physical cards, dark card faces, strongly rotated cards and corners hidden under chips or pop-ups are not supported. Real screenshots vary more than synthetic ones, which is why every reading is shown for confirmation.
 
 ## Project structure
 

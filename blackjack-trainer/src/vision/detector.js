@@ -2,18 +2,29 @@
 // suit symbol below it) on light card faces, classifies them against glyph
 // templates rendered at runtime, and groups the cards into dealer / player hands.
 // Pure client-side, no dependencies; results are suggestions the learner confirms.
+//
+// Result: {
+//   width, height,                 // original image size in px
+//   cards: [{ rank, suit, color, confidence, box: { x, y, w, h }, role, handIndex, alternatives }],
+//   dealerUpCard, playerHands, notes, timingMs,
+// }
+// - rank: 'A', '2'..'10', 'J', 'Q', 'K'; suit: 'S' | 'H' | 'D' | 'C' | null (unsure).
+// - confidence: estimated probability that the rank is right (>= 0.8: very likely).
+// - box: the corner index (rank + suit) in original image pixels.
+// - role: 'dealer' | 'player' | 'unknown' (odd-sized cards, e.g. a history strip);
+//   handIndex: player hand, left to right (0 for the dealer and unknown cards).
+// - alternatives: the next most likely ranks, for a correction menu.
 
 import { classifyGlyph, getTemplates, gridFeatures, inkBounds, makeCanvas } from './glyphs.js';
 
 const DEFAULT_MAX_PIXELS = 4_200_000;
 const FACE_MAX_CHROMA = 64;
-const INK_WEAK = 40; // luma drop below the paper that may belong to a glyph
-const INK_STRONG = 90; // luma drop that is certainly ink
+const INK_WEAK = 40; // luma drop below white paper that may belong to a glyph
+const INK_STRONG = 90; // luma drop below white paper that is certainly ink
 const MIN_REGION_H = 24;
 const MIN_PROBABILITY = 0.3;
 
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
-const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 /**
  * Read the cards in a screenshot.
@@ -37,7 +48,7 @@ export async function readCardsFromImage(source, options = {}) {
     let imageData;
     try {
       imageData = ctx.getImageData(0, 0, w, h);
-    } catch (err) {
+    } catch {
       throw new Error('The image could not be read (it may come from another website). Save it and upload the file instead.');
     }
     const result = detectCards(imageData, { ...options, originalWidth: width, originalHeight: height });
@@ -69,13 +80,19 @@ async function toDrawable(source) {
       img.src = url;
       await img.decode();
       return { image: img, width: img.naturalWidth, height: img.naturalHeight, release: () => URL.revokeObjectURL(url) };
-    } catch (err) {
+    } catch {
       URL.revokeObjectURL(url);
       throw new Error('That file does not look like an image we can read. Try a PNG or JPEG screenshot.');
     }
   }
   if (typeof HTMLImageElement !== 'undefined' && source instanceof HTMLImageElement) {
-    if (!source.complete || !source.naturalWidth) await source.decode();
+    if (!source.complete || !source.naturalWidth) {
+      try {
+        await source.decode();
+      } catch {
+        throw new Error('The image could not be loaded. Try a PNG or JPEG screenshot.');
+      }
+    }
     return { image: source, width: source.naturalWidth, height: source.naturalHeight, release: none };
   }
   if (typeof ImageBitmap !== 'undefined' && source instanceof ImageBitmap) {
@@ -85,6 +102,11 @@ async function toDrawable(source) {
     return { image: source, width: source.width, height: source.height, release: none };
   }
   throw new TypeError('readCardsFromImage expects a File, Blob, image, canvas or ImageBitmap.');
+}
+
+/** Build the glyph templates ahead of time (~150-400 ms) so the first read is faster. */
+export function warmUp() {
+  getTemplates();
 }
 
 /**
@@ -98,6 +120,9 @@ export function detectCards(imageData, options = {}) {
   const srcH = imageData.height;
   const origW = options.originalWidth || srcW;
   const origH = options.originalHeight || srcH;
+  if (!srcW || !srcH) {
+    return { ...assemble([], { toOrigX: 1, toOrigY: 1, origW, origH, W: 0, H: 0 }), timingMs: 0 };
+  }
   getTemplates();
 
   let img = imageData;
@@ -114,12 +139,9 @@ export function detectCards(imageData, options = {}) {
   const toOrigY = (origH / srcH) * factor;
 
   const { luma, chroma } = channels(img.data, N);
-  const tFace = faceThreshold(luma, chroma, N);
-  const face = new Uint8Array(N);
-  for (let p = 0; p < N; p++) face[p] = luma[p] >= tFace && chroma[p] <= FACE_MAX_CHROMA ? 1 : 0;
-  const { labels, regions } = labelRegions(face, W, H);
-
-  const env = { W, H, luma, labels, data: img.data, stack: new Int32Array(N) };
+  const labelled = labelRegions(faceMask(luma, chroma, W, H), W, H);
+  const { labels, regions } = labelled;
+  const env = { W, H, luma, labels, data: img.data, stack: labelled.stack };
   const contexts = [];
   const debug = options.debug ? { regions: [], skipped: [], candidates: [], pairs: [] } : null;
   for (const region of regions) {
@@ -140,17 +162,14 @@ export function detectCards(imageData, options = {}) {
   const row = contexts.flatMap((rc) => readIndices(rc, 'row', null));
   const bare = contexts.flatMap((rc) => readBareRanks(rc));
   const weight = (cards) => cards.reduce((sum, c) => sum + c.confidence, 0);
-  let found = weight(row) > weight(stack) ? row : stack;
-  let layout = found === row && row.length ? 'row' : 'stack';
+  const paired = weight(row) > weight(stack) ? row : stack;
   // Rank-only readings are capped at 0.6 confidence, so they only win when
   // the paired readings found clearly fewer cards.
-  if (weight(bare) > 1.5 * weight(found)) {
-    found = bare;
-    layout = 'rank';
-  }
-  found = suppressOutliers(found);
+  const rankOnly = weight(bare) > 1.5 * weight(paired);
+  const found = rankOnly ? bare : paired;
+  markOutliers(found);
   const result = assemble(found, { toOrigX, toOrigY, origW, origH, W, H });
-  if (found.length && layout === 'rank') {
+  if (rankOnly && found.length) {
     result.notes.unshift('No suit symbols were found next to the card ranks, so the cards were read from their rank only. Please check them.');
   }
   result.timingMs = Math.round(now() - t0);
@@ -203,21 +222,45 @@ function channels(data, N) {
   return { luma, chroma };
 }
 
-// Card faces are the brightest low-saturation surfaces; threshold relative to them.
-function faceThreshold(luma, chroma, N) {
-  const hist = new Uint32Array(256);
-  for (let p = 0; p < N; p++) if (chroma[p] <= FACE_MAX_CHROMA) hist[luma[p]]++;
-  const need = Math.max(64, N * 0.002);
-  let acc = 0;
-  let top = 255;
-  for (let v = 255; v >= 0; v--) {
-    acc += hist[v];
-    if (acc >= need) {
-      top = v;
-      break;
+// Card faces are the brightest low-saturation surfaces around them. The
+// threshold follows the local brightness (blocks of 16 px, 3x3 neighbourhood)
+// so cards dimmed behind a pop-up dialog are still found.
+function faceMask(luma, chroma, W, H) {
+  const B = 16;
+  const gw = Math.ceil(W / B);
+  const gh = Math.ceil(H / B);
+  const blockMax = new Uint8Array(gw * gh);
+  for (let y = 0; y < H; y++) {
+    const row = ((y / B) | 0) * gw;
+    for (let x = 0, p = y * W; x < W; x++, p++) {
+      if (chroma[p] > FACE_MAX_CHROMA) continue;
+      const b = row + ((x / B) | 0);
+      if (luma[p] > blockMax[b]) blockMax[b] = luma[p];
     }
   }
-  return Math.max(135, Math.min(205, top - 60));
+  const limit = new Uint8Array(gw * gh);
+  for (let by = 0; by < gh; by++) {
+    for (let bx = 0; bx < gw; bx++) {
+      let m = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        const yy = by + dy;
+        if (yy < 0 || yy >= gh) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          const xx = bx + dx;
+          if (xx >= 0 && xx < gw && blockMax[yy * gw + xx] > m) m = blockMax[yy * gw + xx];
+        }
+      }
+      limit[by * gw + bx] = m < 100 ? 255 : Math.max(85, Math.min(205, Math.round(m - Math.max(40, 0.24 * m))));
+    }
+  }
+  const face = new Uint8Array(W * H);
+  for (let y = 0; y < H; y++) {
+    const row = ((y / B) | 0) * gw;
+    for (let x = 0, p = y * W; x < W; x++, p++) {
+      face[p] = chroma[p] <= FACE_MAX_CHROMA && luma[p] >= limit[row + ((x / B) | 0)] ? 1 : 0;
+    }
+  }
+  return face;
 }
 
 function labelRegions(mask, W, H) {
@@ -253,7 +296,7 @@ function labelRegions(mask, W, H) {
     regions.push({ id: next, area, x0, y0, x1, y1 });
     next++;
   }
-  return { labels, regions };
+  return { labels, regions, stack };
 }
 
 function percentile(hist, total, q) {
@@ -312,8 +355,9 @@ function analyzeRegion(region, env, debug) {
     if (y < bh - 1 && state[q + bw] === 0) { state[q + bw] = 2; stack[sp++] = q + bw; }
   }
 
-  const weakLimit = paper - INK_WEAK;
-  const strongLimit = paper - INK_STRONG;
+  // Ink thresholds scale with the paper so dimmed cards work too.
+  const weakLimit = paper - Math.max(18, INK_WEAK * paper / 250);
+  const strongLimit = paper - Math.max(40, INK_STRONG * paper / 250);
   reclaimTouchingInk(state, bw, bh, (q) => {
     const y = (q / bw) | 0;
     return luma[(y0 + y) * W + x0 + q - y * bw] <= weakLimit;
@@ -465,6 +509,17 @@ function analyzeRegion(region, env, debug) {
   return { region, cands: cands.filter((c) => c.cls), L: ctxLocal };
 }
 
+// A glyph of similar height on the same baseline close beside `g` (on side
+// -1 = left, +1 = right): a corner index stands alone, letters in text do not.
+function hasTextNeighbour(g, cands, side) {
+  return cands.some((o) => {
+    if (o === g || conflicts(o, g)) return false;
+    const gapX = side < 0 ? g.bx0 - o.bx1 : o.bx0 - g.bx1;
+    if (gapX < -0.1 * g.h || gapX > 0.6 * g.h) return false;
+    return Math.abs(o.by1 - g.by1) < 0.2 * g.h && o.h > 0.5 * g.h && o.h < 1.6 * g.h;
+  });
+}
+
 /**
  * Pair rank glyphs with their suit: 'stack' = suit printed below the rank (the
  * usual corner index), 'row' = suit to the right of the rank. For every rank
@@ -478,9 +533,11 @@ function readIndices(rc, layout, debug) {
   const entries = [];
   for (const r of cands) {
     if (r.cls.rank.score < 0.3) continue;
+    if (layout === 'row' && hasTextNeighbour(r, cands, -1)) continue;
     const options = [];
     for (const s of cands) {
       if (s === r || s.color !== r.color || conflicts(r, s)) continue;
+      if (layout === 'row' && hasTextNeighbour(s, cands, 1)) continue;
       const f = features(r, s, L);
       if (f) options.push({ s, f, pick: suitPick(f) });
     }
@@ -528,11 +585,7 @@ function readBareRanks(rc) {
     const topFrac = (r.by0 - col.top) / cardH;
     const sizeFrac = r.h / cardH;
     if (topFrac > 0.12 || sizeFrac < 0.06 || sizeFrac > 0.3) continue;
-    // A corner index stands alone; letters in a line of text have close neighbours.
-    const crowded = cands.some((o) => o !== r && !conflicts(o, r)
-      && Math.min(o.by1, r.by1) - Math.max(o.by0, r.by0) > 0.5 * Math.min(o.h, r.h)
-      && Math.max(o.bx0 - r.bx1, r.bx0 - o.bx1) < 0.6 * r.h);
-    if (crowded) continue;
+    if (hasTextNeighbour(r, cands, -1) || hasTextNeighbour(r, cands, 1)) continue;
     const f = {
       sr: rank.score, mrr: rank.score - rank.second, mrs: rank.score - Math.max(suit.score, suit180.score), mro: 0.5,
       ss: 0, mss: 0, msr: 0.1, gap: 0.2, dx: 0, top: topFrac, size: sizeFrac, ratio: 0.7,
@@ -747,36 +800,10 @@ function pairFeatures(r, s, L) {
   if (ratio < 0.3 || ratio > 1.5) return null;
   const dx = Math.abs(s.cx - r.cx);
   if (dx > 0.5 * Math.max(r.w, s.w) + 0.1 * rh) return null;
-  // Corner indices sit near the top of the card and are small relative to it.
-  const col = columnExtent(L, r.cx, r.by0, s.by1);
-  const cardH = col.bottom - col.top;
-  const topFrac = (r.by0 - col.top) / cardH;
-  const sizeFrac = rh / cardH;
-  if (topFrac > 0.2 || sizeFrac > 0.27 || sizeFrac < 0.04) return null;
-  const R = r.cls;
-  const S = s.cls;
-  if (!looksLikeSuit(S)) return null;
-  return {
-    sr: R.rank.score,
-    mrr: R.rank.score - R.rank.second,
-    mrs: R.rank.score - Math.max(R.suit.score, R.suit180.score),
-    mro: r.splitPart ? R.rank.score - R.other.score : 0.5,
-    ss: S.suit.score,
-    mss: S.suit.score - S.suit.second,
-    msr: S.suit.score - Math.max(S.rank.score, S.suit180.score, S.other.score),
-    gap: gap / rh,
-    dx: dx / rh,
-    top: topFrac,
-    size: sizeFrac,
-    ratio,
-  };
+  return indexFeatures(r, s, L, { gap: gap / rh, offset: dx / rh, ratio, maxSize: 0.27, bottom: s.by1 });
 }
 
-function looksLikeSuit(S) {
-  return S.suit.score >= 0.45 && S.suit.score - Math.max(S.rank.score, S.suit180.score, S.other.score) >= -0.1;
-}
-
-// Same features for a suit printed to the right of the rank.
+// The same for a suit printed to the right of the rank.
 function rowPairFeatures(r, s, L) {
   const rh = r.h;
   const gap = s.bx0 - r.bx1;
@@ -785,14 +812,21 @@ function rowPairFeatures(r, s, L) {
   if (ratio < 0.3 || ratio > 1.2) return null;
   const scy = (s.by0 + s.by1) / 2;
   if (scy < r.by0 + 0.2 * rh || scy > r.by1 + 0.1 * rh) return null;
-  const col = columnExtent(L, r.cx, r.by0, r.by1);
+  const offset = Math.abs(scy - (r.by0 + r.by1) / 2) / rh;
+  return indexFeatures(r, s, L, { gap: gap / rh, offset, ratio, maxSize: 0.3, bottom: r.by1 });
+}
+
+function indexFeatures(r, s, L, geo) {
+  // Corner indices sit near the top of the card and are small relative to it.
+  const col = columnExtent(L, r.cx, r.by0, geo.bottom);
   const cardH = col.bottom - col.top;
-  const topFrac = (r.by0 - col.top) / cardH;
-  const sizeFrac = rh / cardH;
-  if (topFrac > 0.2 || sizeFrac > 0.3 || sizeFrac < 0.04) return null;
+  const top = (r.by0 - col.top) / cardH;
+  const size = r.h / cardH;
+  if (top > 0.2 || size > geo.maxSize || size < 0.04) return null;
   const R = r.cls;
   const S = s.cls;
-  if (!looksLikeSuit(S)) return null;
+  const suitMargin = S.suit.score - Math.max(S.rank.score, S.suit180.score, S.other.score);
+  if (S.suit.score < 0.45 || suitMargin < -0.1) return null; // not a suit symbol
   return {
     sr: R.rank.score,
     mrr: R.rank.score - R.rank.second,
@@ -800,12 +834,12 @@ function rowPairFeatures(r, s, L) {
     mro: r.splitPart ? R.rank.score - R.other.score : 0.5,
     ss: S.suit.score,
     mss: S.suit.score - S.suit.second,
-    msr: S.suit.score - Math.max(S.rank.score, S.suit180.score, S.other.score),
-    gap: gap / rh,
-    dx: Math.abs(scy - (r.by0 + r.by1) / 2) / rh,
-    top: topFrac,
-    size: sizeFrac,
-    ratio,
+    msr: suitMargin,
+    gap: geo.gap,
+    dx: geo.offset,
+    top,
+    size,
+    ratio: geo.ratio,
   };
 }
 
@@ -863,16 +897,16 @@ function dropCentreArt(cards) {
   }
 }
 
-
-// Drop detections whose index size is far from the rest (decorations, artwork).
-function suppressOutliers(cards) {
-  if (cards.length < 3) return cards;
-  const hs = cards.map((c) => c.rankH).sort((a, b) => a - b);
-  const med = hs[hs.length >> 1];
-  return cards.filter((c) => c.rankH <= med * 1.8 && c.rankH >= med * 0.45);
+// Cards whose index size is far from the rest (a history strip, decorations)
+// are reported with role 'unknown' instead of being put into a hand.
+function markOutliers(cards) {
+  if (cards.length < 3) return;
+  const med = median(cards.map((c) => c.rankH));
+  for (const c of cards) c.outlier = c.rankH > med * 1.8 || c.rankH < med * 0.45;
 }
 
-function assemble(found, geo) {
+function assemble(detections, geo) {
+  let found = detections;
   const { toOrigX, toOrigY, origW, origH } = geo;
   const notes = [];
   const toBox = (b) => ({
@@ -882,10 +916,12 @@ function assemble(found, geo) {
     h: Math.round((b.y1 - b.y0) * toOrigY),
   });
   if (!found.length) {
-    notes.push('No cards were recognised. Make sure the top-left corner of each card (rank and suit) is visible, and try a larger or sharper screenshot.');
+    notes.push('No cards were recognized. Make sure the top-left corner of each card (rank and suit) is visible, and try a larger or sharper screenshot.');
     return { width: origW, height: origH, cards: [], dealerUpCard: null, playerHands: [], notes, timingMs: 0 };
   }
 
+  const strays = found.filter((c) => c.outlier);
+  found = found.filter((c) => !c.outlier);
   const hMed = median(found.map((c) => c.rankH));
   // Link cards of the same hand: same light region, or neighbouring regions side by side.
   const parent = found.map((_, i) => i);
@@ -913,7 +949,9 @@ function assemble(found, geo) {
   const groups = [...groupsMap.values()].map((cards) => {
     cards.sort((a, b) => a.wbox.x0 - b.wbox.x0);
     const ys = cards.map((c) => (c.wbox.y0 + c.wbox.y1) / 2);
-    return { cards, cy: ys.reduce((a, b) => a + b, 0) / ys.length, x0: Math.min(...cards.map((c) => c.wbox.x0)) };
+    const x0 = Math.min(...cards.map((c) => c.wbox.x0));
+    const cx = (x0 + Math.max(...cards.map((c) => c.wbox.x1))) / 2;
+    return { cards, cy: ys.reduce((a, b) => a + b, 0) / ys.length, x0, cx };
   });
   groups.sort((a, b) => a.cy - b.cy);
 
@@ -928,7 +966,7 @@ function assemble(found, geo) {
       notes.push("All card groups are at the same height, so the dealer's hand could not be identified. All cards were assigned to the player; mark the dealer's card before analyzing.");
     } else if (sameLevel.length > 1) {
       const centre = geo.W / 2;
-      dealer = sameLevel.reduce((best, g) => (Math.abs(g.x0 - centre) < Math.abs(best.x0 - centre) ? g : best));
+      dealer = sameLevel.reduce((best, g) => (Math.abs(g.cx - centre) < Math.abs(best.cx - centre) ? g : best));
       players = groups.filter((g) => g !== dealer);
       notes.push("More than one group of cards is at the dealer's height; the one closest to the middle was used as the dealer's hand.");
     } else {
@@ -961,6 +999,8 @@ function assemble(found, geo) {
     cards.push(card);
     return card;
   }));
+  for (const c of strays) cards.push(out(c, 'unknown', 0));
+  if (strays.length) notes.push(`${strays.length} card${strays.length > 1 ? 's are' : ' is'} much smaller or larger than the others (for example in a history panel) and ${strays.length > 1 ? 'were' : 'was'} not assigned to a hand.`);
   const unsure = cards.filter((c) => c.confidence < 0.8).length;
   if (unsure) notes.push(`${unsure} card${unsure > 1 ? 's were' : ' was'} hard to read. Please check ${unsure > 1 ? 'them' : 'it'} before analyzing.`);
   return { width: origW, height: origH, cards, dealerUpCard, playerHands, notes, timingMs: 0 };

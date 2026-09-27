@@ -125,10 +125,14 @@ export function randomDeal(seed = Date.now()) {
 }
 
 /**
- * Render a table screenshot. Returns the ground truth: every face-up card with
- * its role, hand index, card box and corner-index box in canvas pixels.
+ * Render a table screenshot onto `canvas` (resized to width x height).
+ * dealer: cards in deal order; with holeCardHidden the second one is drawn face
+ * down (a face-down card is added if only the up card is given).
+ * playerHands: one array of cards per hand, drawn left to right.
  * `jitter` (default on) varies sizes and offsets a little per seed;
- * `overrides` patches the style (e.g. { tilt: 4, font: { family: 'serif' } }).
+ * `overrides` patches the style (e.g. { tilt: 4, indexLayout: 'row', dialog: 'INSURANCE?' }).
+ * Returns the ground truth: every face-up card with its role, hand index,
+ * card box and corner-index box in canvas pixels.
  */
 export function renderSampleTable(canvas, options = {}) {
   const {
@@ -195,7 +199,7 @@ export function renderSampleTable(canvas, options = {}) {
   const fan = { ...S.fan, dx: Math.max(S.fan.dx, metrics.right + 6) };
   const dealerBox = place(dealerCards, 'dealer', 0, BASE_W / 2, 62, fan);
   const visibleDealer = dealerCards.filter((c) => !c.faceDown);
-  drawTotalBubble(ctx, dealerBox.x - 14, dealerBox.y + dealerBox.h / 2, handLabel(visibleDealer), 'right');
+  if (visibleDealer.length) drawTotalBubble(ctx, dealerBox.x - 14, dealerBox.y + dealerBox.h / 2, handLabel(visibleDealer), 'right');
 
   const hands = playerHands.length ? playerHands : [];
   const handWidth = (n) => S.card.w + (n - 1) * fan.dx;
@@ -214,6 +218,7 @@ export function renderSampleTable(canvas, options = {}) {
   });
 
   drawButtons(ctx, S, hands);
+  if (S.dialog) drawDialog(ctx, width, height, scale, ox, oy, S.dialog);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   return { width, height, style: name, cards: truth };
 }
@@ -505,6 +510,38 @@ function drawChipSpot(ctx, cx, cy, S, rng) {
   for (let i = 0; i < count; i++) {
     drawChip(ctx, cx - 2 + i * 2, cy + 4 - i * 5, 27, colors[Math.floor(rng() * colors.length)]);
   }
+}
+
+// A modal prompt that dims the whole table (e.g. S.dialog = 'INSURANCE?').
+function drawDialog(ctx, width, height, scale, ox, oy, title) {
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+  ctx.fillRect(0, 0, width, height);
+  ctx.setTransform(scale, 0, 0, scale, ox, oy);
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+  ctx.shadowBlur = 18;
+  ctx.fillStyle = '#ffffff';
+  roundRect(ctx, 840, 196, 370, 100, 14);
+  ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.fillStyle = '#111827';
+  ctx.font = 'bold 22px Arial, sans-serif';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(title, 862, 222);
+  ctx.font = '15px Arial, sans-serif';
+  ctx.fillText('Take the side bet? (virtual chips)', 862, 248);
+  [['YES', '#16a34a'], ['NO', '#dc2626']].forEach(([label, color], i) => {
+    ctx.fillStyle = color;
+    roundRect(ctx, 1044 + i * 80, 258, 70, 28, 8);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 15px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, 1079 + i * 80, 273);
+    ctx.textAlign = 'left';
+  });
+  ctx.restore();
 }
 
 function drawButtons(ctx, S, hands) {
