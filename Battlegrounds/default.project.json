@@ -1,0 +1,23 @@
+{
+  "name": "BattlegroundsHub",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "BattleHub": {
+        "$path": "src/ReplicatedStorage/BattleHub"
+      }
+    },
+    "ServerScriptService": {
+      "BattleHubServer": {
+        "$path": "src/ServerScriptService/BattleHubServer"
+      }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "BattleHubClient": {
+          "$path": "src/StarterPlayer/StarterPlayerScripts/BattleHubClient"
+        }
+      }
+    }
+  }
+}

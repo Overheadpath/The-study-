@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: 'Bangers'; src: url('/node_modules/@fontsource/bangers/files/bangers-latin-400-normal.woff2'); }
+  @font-face { font-family: 'Permanent Marker'; src: url('/node_modules/@fontsource/permanent-marker/files/permanent-marker-latin-400-normal.woff2'); }
+  @font-face { font-family: 'Creepster'; src: url('/node_modules/@fontsource/creepster/files/creepster-latin-400-normal.woff2'); }
+  @font-face { font-family: 'Montserrat'; font-weight: 800; src: url('/node_modules/@fontsource/montserrat/files/montserrat-latin-800-normal.woff2'); }
+  @font-face { font-family: 'Montserrat'; font-weight: 700; src: url('/node_modules/@fontsource/montserrat/files/montserrat-latin-700-normal.woff2'); }
+  html, body { margin: 0; padding: 0; background: #000; overflow: hidden; }
+  #fontwarm span { position: absolute; top: -100px; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "/node_modules/three/build/three.module.js",
+  "three/addons/": "/node_modules/three/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="fontwarm">
+  <span style="font-family:Bangers">a</span><span style="font-family:'Permanent Marker'">a</span>
+  <span style="font-family:Creepster">a</span><span style="font-family:Montserrat;font-weight:800">a</span>
+  <span style="font-family:Montserrat;font-weight:700">a</span>
+</div>
+<script type="module" src="/render.js"></script>
+</body>
+</html>

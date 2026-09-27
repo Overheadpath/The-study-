@@ -1,0 +1,13 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "Preview renderers for the BattleHub place and UI (see ../../README.md)",
+  "dependencies": {
+    "@fontsource/bangers": "^5.0.0",
+    "@fontsource/creepster": "^5.0.0",
+    "@fontsource/montserrat": "^5.0.0",
+    "@fontsource/permanent-marker": "^5.0.0",
+    "playwright-core": "1.47.2",
+    "three": "0.169.0"
+  }
+}
