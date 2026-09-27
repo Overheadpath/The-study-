@@ -528,6 +528,11 @@ function readBareRanks(rc) {
     const topFrac = (r.by0 - col.top) / cardH;
     const sizeFrac = r.h / cardH;
     if (topFrac > 0.12 || sizeFrac < 0.06 || sizeFrac > 0.3) continue;
+    // A corner index stands alone; letters in a line of text have close neighbours.
+    const crowded = cands.some((o) => o !== r && !conflicts(o, r)
+      && Math.min(o.by1, r.by1) - Math.max(o.by0, r.by0) > 0.5 * Math.min(o.h, r.h)
+      && Math.max(o.bx0 - r.bx1, r.bx0 - o.bx1) < 0.6 * r.h);
+    if (crowded) continue;
     const f = {
       sr: rank.score, mrr: rank.score - rank.second, mrs: rank.score - Math.max(suit.score, suit180.score), mro: 0.5,
       ss: 0, mss: 0, msr: 0.1, gap: 0.2, dx: 0, top: topFrac, size: sizeFrac, ratio: 0.7,
