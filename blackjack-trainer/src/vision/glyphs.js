@@ -24,7 +24,7 @@ const TEMPLATE_FONTS = [
 ];
 const WEIGHTS = ['normal', 'bold'];
 const SQUEEZE = [1, 0.72];
-const FONT_PX = 48;
+const FONT_PX = 44;
 const SUIT_CHARS = { S: '♠', H: '♥', D: '♦', C: '♣' };
 
 let cached = null;
@@ -161,50 +161,61 @@ function dot(a, b) {
   return s;
 }
 
+const CANVAS_W = 128;
+const CANVAS_H = 96;
+const BASELINE = 76;
+
 // Render with `draw(ctx)` in black on white and return the normalised glyph.
-function captureGlyph(ctx, canvas, draw) {
-  const { width, height } = canvas;
+function captureGlyph(ctx, draw) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, width, height);
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
   ctx.fillStyle = '#000000';
   draw(ctx);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  const { data } = ctx.getImageData(0, 0, width, height);
-  const plane = new Float32Array(width * height);
-  let colored = false;
+  const { data } = ctx.getImageData(0, 0, CANVAS_W, CANVAS_H);
+  const plane = new Float32Array(CANVAS_W * CANVAS_H);
   for (let i = 0, p = 0; p < plane.length; i += 4, p++) {
     const r = data[i];
     const g = data[i + 1];
     const b = data[i + 2];
-    if (Math.max(r, g, b) - Math.min(r, g, b) > 60) colored = true;
+    if (Math.max(r, g, b) - Math.min(r, g, b) > 60) return null; // emoji-style colour glyph
     plane[p] = (255 - (r * 77 + g * 150 + b * 29) / 256) / 255;
   }
-  if (colored) return null; // emoji-style rendering, not a usable template
-  const box = inkBounds(plane, width, 0, 0, width, height, 0.25);
+  const box = inkBounds(plane, CANVAS_W, 0, 0, CANVAS_W, CANVAS_H, 0.25);
   if (!box || box.y1 - box.y0 < 8) return null;
-  return { vec: gridFeatures(plane, width, height, box), aspect: (box.x1 - box.x0) / (box.y1 - box.y0) };
+  return { vec: gridFeatures(plane, CANVAS_W, CANVAS_H, box), aspect: (box.x1 - box.x0) / (box.y1 - box.y0) };
 }
 
 function textDrawer(font, text, squeeze, tracking = 1) {
   return (ctx) => {
     ctx.font = font;
     ctx.textBaseline = 'alphabetic';
-    ctx.setTransform(squeeze, 0, 0, 1, 12, 0);
+    ctx.setTransform(squeeze, 0, 0, 1, 6, 0);
     if (tracking === 1 || text.length < 2) {
-      ctx.fillText(text, 0, 88);
+      ctx.fillText(text, 0, BASELINE);
     } else {
       let x = 0;
       for (const ch of text) {
-        ctx.fillText(ch, x, 88);
+        ctx.fillText(ch, x, BASELINE);
         x += ctx.measureText(ch).width * tracking;
       }
     }
   };
 }
 
+// Cheap identity of the font a CSS family resolves to: missing families fall
+// back to one we already have and produce the same metrics.
+function fontSignature(ctx, font) {
+  ctx.font = font;
+  return ['10', 'A', 'J', 'Q', 'K', '2', '3', '4', '5', '6', '7', '8', '9'].map((t) => {
+    const m = ctx.measureText(t);
+    return [m.width, m.actualBoundingBoxLeft, m.actualBoundingBoxRight, m.actualBoundingBoxAscent, m.actualBoundingBoxDescent].map((v) => v.toFixed(2)).join(',');
+  }).join(';');
+}
+
 function buildTemplates() {
-  const canvas = makeCanvas(200, 128);
+  const canvas = makeCanvas(CANVAS_W, CANVAS_H);
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   const list = [];
   const add = (glyph, label, kind) => {
@@ -214,52 +225,46 @@ function buildTemplates() {
     list.push({ label, kind, vec: glyph.vec, aspect: glyph.aspect });
   };
 
-  const signatures = [];
+  const seen = new Set();
   for (const family of TEMPLATE_FONTS) {
     for (const weight of WEIGHTS) {
       const font = `${weight} ${FONT_PX}px ${family}`;
-      // Families missing on this system fall back to a font we already have.
-      const sig = ['Q', '8', 'K', '4', 'A'].map((t) => captureGlyph(ctx, canvas, textDrawer(font, t, 1)));
-      if (sig.some((g) => !g)) continue;
-      const duplicate = signatures.some((s) => s.every((g, i) => Math.abs(g.aspect - sig[i].aspect) < 0.01 && dot(g.vec, sig[i].vec) > 0.998));
-      if (duplicate) continue;
-      signatures.push(sig);
+      const sig = fontSignature(ctx, font);
+      if (seen.has(sig)) continue;
+      seen.add(sig);
       for (const squeeze of SQUEEZE) {
         for (const label of RANK_LABELS) {
-          if (label === '10') {
-            add(captureGlyph(ctx, canvas, textDrawer(font, '10', squeeze)), '10', KIND_RANK);
-            add(captureGlyph(ctx, canvas, textDrawer(font, '10', squeeze, 0.82)), '10', KIND_RANK);
-          } else {
-            add(captureGlyph(ctx, canvas, textDrawer(font, label, squeeze)), label, KIND_RANK);
-          }
+          add(captureGlyph(ctx, textDrawer(font, label, squeeze)), label, KIND_RANK);
+          // Card decks often print "10" with the digits squeezed together.
+          if (label === '10') add(captureGlyph(ctx, textDrawer(font, '10', squeeze, 0.82)), '10', KIND_RANK);
         }
-        for (const label of OTHER_LABELS) add(captureGlyph(ctx, canvas, textDrawer(font, label, squeeze)), label, KIND_OTHER);
+        for (const label of OTHER_LABELS) add(captureGlyph(ctx, textDrawer(font, label, squeeze)), label, KIND_OTHER);
       }
     }
   }
 
+  const h = 64;
   for (const suit of SUIT_LABELS) {
     for (const variant of SUIT_VARIANTS) {
       for (const stretch of [0.85, 1, 1.18]) {
-        const h = 80;
         const w = h * SUIT_ASPECT[suit] * stretch;
-        add(captureGlyph(ctx, canvas, (c) => drawSuit(c, suit, 20, 20, w, h, variant)), suit, KIND_SUIT);
+        add(captureGlyph(ctx, (c) => drawSuit(c, suit, 12, 12, w, h, variant)), suit, KIND_SUIT);
         if (suit !== 'D') {
-          add(captureGlyph(ctx, canvas, (c) => {
-            c.setTransform(-1, 0, 0, -1, 40 + w, 120);
+          add(captureGlyph(ctx, (c) => {
+            c.setTransform(-1, 0, 0, -1, 24 + w, 88);
             drawSuit(c, suit, 0, 0, w, h, variant);
           }), `${suit}180`, KIND_SUIT180);
         }
       }
     }
     for (const family of ['serif', 'sans-serif', 'monospace', 'system-ui']) {
-      add(captureGlyph(ctx, canvas, textDrawer(`${FONT_PX * 1.5}px ${family}`, SUIT_CHARS[suit], 1)), suit, KIND_SUIT);
+      add(captureGlyph(ctx, textDrawer(`${FONT_PX * 1.25}px ${family}`, SUIT_CHARS[suit], 1)), suit, KIND_SUIT);
     }
   }
 
   const matrix = new Float32Array(list.length * DIM);
   list.forEach((t, i) => matrix.set(t.vec, i * DIM));
-  const labels = [...RANK_LABELS, ...SUIT_LABELS, ...SUIT_LABELS.map((s) => `${s}180`), ...OTHER_LABELS];
+  const labels = [...RANK_LABELS, ...SUIT_LABELS, ...SUIT_LABELS.map((l) => `${l}180`), ...OTHER_LABELS];
   const labelIndex = new Map(labels.map((l, i) => [l, i]));
   const kinds = labels.map((l) => (RANK_LABELS.includes(l) ? KIND_RANK : SUIT_LABELS.includes(l) ? KIND_SUIT : l.endsWith('180') ? KIND_SUIT180 : KIND_OTHER));
   const tLabel = new Int32Array(list.length);

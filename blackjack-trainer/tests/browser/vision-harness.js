@@ -95,7 +95,7 @@ export function scoreDetections(truthCards, result, scale = 1) {
  * Render `count` random tables per style, optionally rescale + JPEG them,
  * run detectCards and aggregate the scores.
  */
-export async function runBatch({ styles, count, seed = 1, jpegQuality = 0, scaleRange = [1, 1], keepErrors = 20 }) {
+export async function runBatch({ styles, count, seed = 1, jpegQuality = 0, scaleRange = [1, 1], keepErrors = 20, overrides = null }) {
   const rng = createRng(seed);
   const canvas = document.createElement('canvas');
   const totals = { total: 0, correct: 0, rankOk: 0, suitOk: 0, handOk: 0, found: 0, spurious: 0, images: 0, ms: 0, maxMs: 0 };
@@ -107,7 +107,7 @@ export async function runBatch({ styles, count, seed = 1, jpegQuality = 0, scale
     for (let i = 0; i < count; i++) {
       const tableSeed = Math.floor(rng() * 1e9);
       const deal = makeDeal(createRng(tableSeed));
-      const truth = renderSampleTable(canvas, { ...deal, style, seed: tableSeed });
+      const truth = renderSampleTable(canvas, { ...deal, style, seed: tableSeed, overrides });
       const scale = scaleRange[0] + rng() * (scaleRange[1] - scaleRange[0]);
       const imageData = await degrade(canvas, scale, jpegQuality);
       const t0 = performance.now();
@@ -123,7 +123,7 @@ export async function runBatch({ styles, count, seed = 1, jpegQuality = 0, scale
       ps.spurious += s.spurious;
       confidences.push(...s.confidences.map((c) => ({ ...c, style, seed: tableSeed, scale: Number(scale.toFixed(3)) })));
       if (s.errors.length && errors.length < keepErrors) {
-        errors.push({ style, seed: tableSeed, scale: Number(scale.toFixed(3)), jpegQuality, deal, errors: s.errors, notes: result.notes });
+        errors.push({ style, seed: tableSeed, scale, jpegQuality, deal, errors: s.errors, notes: result.notes });
       }
     }
   }

@@ -18,6 +18,8 @@ const result = await build({
   target: 'es2020',
   legalComments: 'none',
   write: false,
+  // Hosts that supply their own page skeleton (hosted previews) also block downloads.
+  define: fragment ? { 'globalThis.__BJ_NO_DOWNLOAD__': 'true' } : {},
 });
 const js = result.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
 const css = await readFile(`${root}src/ui/styles.css`, 'utf8');

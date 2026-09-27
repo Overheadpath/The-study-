@@ -305,7 +305,10 @@ export function createStatsView(ctx) {
           },
           'Copy backup',
         ),
-        h(
+        // Hosted previews block downloads; the single-file preview build sets this flag.
+        globalThis.__BJ_NO_DOWNLOAD__
+          ? null
+          : h(
           'button',
           {
             type: 'button',

@@ -127,7 +127,8 @@ export function randomDeal(seed = Date.now()) {
 /**
  * Render a table screenshot. Returns the ground truth: every face-up card with
  * its role, hand index, card box and corner-index box in canvas pixels.
- * `jitter` (default on) varies sizes and offsets a little per seed.
+ * `jitter` (default on) varies sizes and offsets a little per seed;
+ * `overrides` patches the style (e.g. { tilt: 4, font: { family: 'serif' } }).
  */
 export function renderSampleTable(canvas, options = {}) {
   const {
@@ -139,10 +140,11 @@ export function renderSampleTable(canvas, options = {}) {
     height = BASE_H,
     seed = 1,
     jitter = true,
+    overrides = null,
   } = options;
   const name = STYLES[style] ? style : 'classic';
   const rng = createRng(seed);
-  const S = resolveStyle(STYLES[name], jitter ? rng : null);
+  const S = mergeStyle(resolveStyle(STYLES[name], jitter ? rng : null), overrides);
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
@@ -237,6 +239,19 @@ function resolveStyle(base, rng) {
   return S;
 }
 
+// Deep-merge style overrides (used by tests to vary fonts, tilt, sizes...).
+function mergeStyle(S, overrides) {
+  if (!overrides) return S;
+  for (const [key, value] of Object.entries(overrides)) {
+    if (value && typeof value === 'object' && !Array.isArray(value) && S[key] && typeof S[key] === 'object') {
+      S[key] = { ...S[key], ...value };
+    } else {
+      S[key] = value;
+    }
+  }
+  return S;
+}
+
 // Axis-aligned bounds of box b after rotating it by `angle` and moving it to (cx, cy).
 function rotateBox(b, angle, cx, cy) {
   const c = Math.cos(angle);
@@ -275,6 +290,8 @@ function fontOf(S, size = S.font.size) {
   return `${S.font.weight} ${size}px ${S.font.family}`;
 }
 
+const rowIndexLeft = (S) => Math.max(4, S.index.cx - 9);
+
 // Widest corner index for this style, used to keep pips and fans clear of it.
 function measureIndex(ctx, S) {
   ctx.save();
@@ -286,8 +303,14 @@ function measureIndex(ctx, S) {
     width = Math.max(width, (m.actualBoundingBoxLeft + m.actualBoundingBoxRight) * sx);
   }
   ctx.restore();
+  // `art` keeps pips clear of the index column; `right` keeps fans from covering it.
+  const art = S.index.cx + Math.max(width, S.index.suit * 1.05) / 2;
+  if (S.indexLayout === 'row') {
+    width += S.index.gap + 1 + S.index.suit * 0.85 * 1.05;
+    return { width, art, right: rowIndexLeft(S) + width };
+  }
   width = Math.max(width, S.index.suit * 1.05);
-  return { width, right: S.index.cx + width / 2 };
+  return { width, art, right: S.index.cx + width / 2 };
 }
 
 function handLabel(cards) {
@@ -603,8 +626,11 @@ function drawBack(ctx, x, y, S, k = 1, shadow = true) {
   ctx.restore();
 }
 
+// Corner index. S.indexLayout: 'stack' (suit below the rank, the default),
+// 'row' (suit right of the rank) or 'rank' (no suit in the corner).
 function drawIndex(ctx, card, x, y, S, color) {
   const f = S.font;
+  const layout = S.indexLayout || 'stack';
   ctx.save();
   ctx.fillStyle = color;
   ctx.font = fontOf(S);
@@ -612,7 +638,7 @@ function drawIndex(ctx, card, x, y, S, color) {
   ctx.textBaseline = 'alphabetic';
   const m = ctx.measureText(card.rank);
   const sx = card.rank === '10' ? f.tenScaleX : f.scaleX;
-  const cx = x + S.index.cx;
+  const cx = layout === 'row' ? x + rowIndexLeft(S) + m.actualBoundingBoxLeft * sx : x + S.index.cx;
   const top = y + S.index.top;
   const baseline = top + m.actualBoundingBoxAscent;
   ctx.save();
@@ -622,14 +648,18 @@ function drawIndex(ctx, card, x, y, S, color) {
   ctx.restore();
   const rx0 = cx - m.actualBoundingBoxLeft * sx;
   const rx1 = cx + m.actualBoundingBoxRight * sx;
-  const sh = S.index.suit;
-  const sw = sh * SUIT_ASPECT[card.suit];
-  const sy = baseline + m.actualBoundingBoxDescent + S.index.gap;
-  drawSuit(ctx, card.suit, cx - sw / 2, sy, sw, sh, S.suitVariant);
+  const bottom = baseline + m.actualBoundingBoxDescent;
+  let box = { x0: rx0, y0: top, x1: rx1, y1: bottom };
+  if (layout !== 'rank') {
+    const sh = layout === 'row' ? S.index.suit * 0.85 : S.index.suit;
+    const sw = sh * SUIT_ASPECT[card.suit];
+    const sxLeft = layout === 'row' ? rx1 + S.index.gap + 1 : cx - sw / 2;
+    const sy = layout === 'row' ? top + (bottom - top - sh) / 2 : bottom + S.index.gap;
+    drawSuit(ctx, card.suit, sxLeft, sy, sw, sh, S.suitVariant);
+    box = { x0: Math.min(rx0, sxLeft), y0: top, x1: Math.max(rx1, sxLeft + sw), y1: Math.max(bottom, sy + sh) };
+  }
   ctx.restore();
-  const x0 = Math.min(rx0, cx - sw / 2);
-  const x1 = Math.max(rx1, cx + sw / 2);
-  return { x: x0, y: top, w: x1 - x0, h: sy + sh - top };
+  return { x: box.x0, y: box.y0, w: box.x1 - box.x0, h: box.y1 - box.y0 };
 }
 
 function drawCardFace(ctx, card, x, y, S, metrics) {
@@ -663,8 +693,10 @@ function drawCardFace(ctx, card, x, y, S, metrics) {
   ctx.fillStyle = color;
   ctx.strokeStyle = color;
   // Keep the artwork clear of the corner indices on both sides.
-  const margin = Math.max(w * 0.27, metrics.right + 4);
-  if (S.cornerIndexOnly) {
+  const margin = Math.max(w * 0.27, metrics.art + 4);
+  // Large-print designs (and non-stacked indices) use one big suit as the art.
+  const simple = S.cornerIndexOnly || (S.indexLayout && S.indexLayout !== 'stack');
+  if (simple) {
     drawCornerSuit(ctx, card, x, y, S);
   } else if (['J', 'Q', 'K'].includes(card.rank)) {
     if (S.court === 'figure') drawCourtFigure(ctx, card, x, y, S, color, margin);
@@ -676,7 +708,7 @@ function drawCardFace(ctx, card, x, y, S, metrics) {
   }
   ctx.restore();
   const indexBox = drawIndex(ctx, card, x, y, S, color);
-  if (!S.cornerIndexOnly) {
+  if (!simple) {
     ctx.save();
     ctx.translate(2 * x + w, 2 * y + h);
     ctx.rotate(Math.PI);

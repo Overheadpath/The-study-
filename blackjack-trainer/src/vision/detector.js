@@ -10,7 +10,7 @@ const FACE_MAX_CHROMA = 64;
 const INK_WEAK = 40; // luma drop below the paper that may belong to a glyph
 const INK_STRONG = 90; // luma drop that is certainly ink
 const MIN_REGION_H = 24;
-const MIN_SCORE = 0.05;
+const MIN_PROBABILITY = 0.3;
 
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -120,20 +120,39 @@ export function detectCards(imageData, options = {}) {
   const { labels, regions } = labelRegions(face, W, H);
 
   const env = { W, H, luma, labels, data: img.data, stack: new Int32Array(N) };
-  let found = [];
-  const debug = options.debug ? { regions: [], candidates: [], pairs: [] } : null;
+  const contexts = [];
+  const debug = options.debug ? { regions: [], skipped: [], candidates: [], pairs: [] } : null;
   for (const region of regions) {
     if (!region) continue;
     const rh = region.y1 - region.y0 + 1;
     const rw = region.x1 - region.x0 + 1;
-    if (rh < MIN_REGION_H || rw < 16 || region.area < 300 || region.area > N * 0.6) continue;
-    if (region.area < 0.25 * rw * rh) continue;
-    const cards = analyzeRegion(region, env, debug);
-    found.push(...cards);
+    if (rh < MIN_REGION_H || rw < 16 || region.area < 300 || region.area > N * 0.6 || region.area < 0.1 * rw * rh) {
+      if (debug && rh >= MIN_REGION_H) debug.skipped.push({ ...region, fill: region.area / (rw * rh) });
+      continue;
+    }
+    const rc = analyzeRegion(region, env, debug);
+    if (rc) contexts.push(rc);
   }
 
+  // Most decks print the suit under the rank; some print it beside the rank,
+  // a few not at all. Use whichever reading the evidence supports best.
+  const stack = contexts.flatMap((rc) => readIndices(rc, 'stack', debug));
+  const row = contexts.flatMap((rc) => readIndices(rc, 'row', null));
+  const bare = contexts.flatMap((rc) => readBareRanks(rc));
+  const weight = (cards) => cards.reduce((sum, c) => sum + c.confidence, 0);
+  let found = weight(row) > weight(stack) ? row : stack;
+  let layout = found === row && row.length ? 'row' : 'stack';
+  // Rank-only readings are capped at 0.6 confidence, so they only win when
+  // the paired readings found clearly fewer cards.
+  if (weight(bare) > 1.5 * weight(found)) {
+    found = bare;
+    layout = 'rank';
+  }
   found = suppressOutliers(found);
   const result = assemble(found, { toOrigX, toOrigY, origW, origH, W, H });
+  if (found.length && layout === 'rank') {
+    result.notes.unshift('No suit symbols were found next to the card ranks, so the cards were read from their rank only. Please check them.');
+  }
   result.timingMs = Math.round(now() - t0);
   if (debug) result.debug = { ...debug, scaleX: toOrigX, scaleY: toOrigY };
   return result;
@@ -293,11 +312,16 @@ function analyzeRegion(region, env, debug) {
     if (y < bh - 1 && state[q + bw] === 0) { state[q + bw] = 2; stack[sp++] = q + bw; }
   }
 
+  const weakLimit = paper - INK_WEAK;
+  const strongLimit = paper - INK_STRONG;
+  reclaimTouchingInk(state, bw, bh, (q) => {
+    const y = (q / bw) | 0;
+    return luma[(y0 + y) * W + x0 + q - y * bw] <= weakLimit;
+  }, Math.max(4, Math.round(bh * 0.12)));
+
   // Ink components inside the holes (8-connected, hysteresis thresholds).
   const inkLab = new Int32Array(M);
   const comps = [null];
-  const weakLimit = paper - INK_WEAK;
-  const strongLimit = paper - INK_STRONG;
   for (let start = 0; start < M; start++) {
     if (state[start] !== 0 || inkLab[start]) continue;
     const sy = (start / bw) | 0;
@@ -358,7 +382,7 @@ function analyzeRegion(region, env, debug) {
     c.w = w;
     glyphs.push(c);
   }
-  if (!glyphs.length) return [];
+  if (!glyphs.length) return null;
 
   // Ink reference per colour: the darkest solid pixels (suit symbols are solid).
   const inkRef = { red: 255, black: 255 };
@@ -427,44 +451,139 @@ function analyzeRegion(region, env, debug) {
     }
   }
 
-  const pairs = [];
-  for (const r of cands) {
-    if (!r.cls || r.cls.rank.score < 0.3) continue;
-    for (const s of cands) {
-      if (s === r || !s.cls || s.color !== r.color || conflicts(r, s)) continue;
-      const pair = scorePair(r, s, ctxLocal);
-      if (pair) pairs.push(pair);
-    }
-  }
-  pairs.sort((a, b) => b.score - a.score);
-  if (debug) {
-    for (const pr of pairs) {
-      debug.pairs.push({
-        box: { x: x0 + Math.min(pr.r.bx0, pr.s.bx0), y: y0 + pr.r.by0, w: Math.max(pr.r.bx1, pr.s.bx1) - Math.min(pr.r.bx0, pr.s.bx0), h: pr.s.by1 - pr.r.by0 },
-        rank: pr.r.cls.rank.label, suit: pr.s.cls.suit.label, f: pr.f, score: pr.score,
-      });
-    }
-  }
-  const taken = [];
-  const cards = [];
-  for (const pr of pairs) {
-    if (pr.score < MIN_SCORE) break;
-    if (taken.some((t) => conflicts(t, pr.r) || conflicts(t, pr.s))) continue;
-    taken.push(pr.r, pr.s);
-    cards.push(makeCard(pr, region, ctxLocal));
-  }
-  dropCentreArt(cards);
   if (debug) {
     debug.regions.push({ id, x0, y0, x1: region.x1, y1: region.y1, paper, inkRef, glyphs: glyphs.length });
     for (const c of cands) {
       if (!c.cls) continue;
       debug.candidates.push({
-        region: id, box: { x: x0 + c.bx0, y: y0 + c.by0, w: c.bx1 - c.bx0, h: c.by1 - c.by0 }, color: c.color, redness: c.parts.map((p) => Math.round(p.redness)), comps: c.parts.length,
+        region: id, box: { x: x0 + c.bx0, y: y0 + c.by0, w: c.bx1 - c.bx0, h: c.by1 - c.by0 }, color: c.color,
+        redness: c.parts.map((p) => Math.round(p.redness)), comps: c.parts.length,
         rank: c.cls.rank, suit: c.cls.suit, suit180: c.cls.suit180, other: c.cls.other, vec: c.vec, aspect: c.w / c.h,
       });
     }
   }
+  return { region, cands: cands.filter((c) => c.cls), L: ctxLocal };
+}
+
+/**
+ * Pair rank glyphs with their suit: 'stack' = suit printed below the rank (the
+ * usual corner index), 'row' = suit to the right of the rank. For every rank
+ * candidate the best-looking suit is chosen, then the most probable readings
+ * are accepted first.
+ */
+function readIndices(rc, layout, debug) {
+  const { region, cands, L } = rc;
+  const features = layout === 'row' ? rowPairFeatures : pairFeatures;
+  const discount = layout === 'row' ? 0.85 : 1;
+  const entries = [];
+  for (const r of cands) {
+    if (r.cls.rank.score < 0.3) continue;
+    const options = [];
+    for (const s of cands) {
+      if (s === r || s.color !== r.color || conflicts(r, s)) continue;
+      const f = features(r, s, L);
+      if (f) options.push({ s, f, pick: suitPick(f) });
+    }
+    if (!options.length) continue;
+    options.sort((a, b) => b.pick - a.pick);
+    entries.push({ r, options, p: rankProbability(options[0].f) * discount });
+  }
+  entries.sort((a, b) => b.p - a.p);
+  if (debug && layout === 'stack') {
+    for (const e of entries) {
+      for (const o of e.options) {
+        debug.pairs.push({
+          box: { x: L.x0 + Math.min(e.r.bx0, o.s.bx0), y: L.y0 + e.r.by0, w: Math.max(e.r.bx1, o.s.bx1) - Math.min(e.r.bx0, o.s.bx0), h: o.s.by1 - e.r.by0 },
+          rank: e.r.cls.rank.label, suit: o.s.cls.suit.label, f: o.f, score: rankProbability(o.f), first: o === e.options[0],
+        });
+      }
+    }
+  }
+  const taken = [];
+  const cards = [];
+  for (const e of entries) {
+    if (e.p < MIN_PROBABILITY) break;
+    if (taken.some((t) => conflicts(t, e.r))) continue;
+    const option = e.options.find((o) => !taken.some((t) => conflicts(t, o.s)));
+    if (!option) continue;
+    const p = rankProbability(option.f) * discount;
+    if (p < MIN_PROBABILITY) continue;
+    taken.push(e.r, option.s);
+    cards.push(makeCard(e.r, option, p, region, L));
+  }
+  dropCentreArt(cards);
   return cards;
+}
+
+// Decks without a suit in the corner: accept clear rank glyphs at the very
+// top of a card, with reduced confidence.
+function readBareRanks(rc) {
+  const { region, cands, L } = rc;
+  const picks = [];
+  for (const r of cands) {
+    const { rank, suit, suit180 } = r.cls;
+    if (rank.score < 0.6 || r.splitPart) continue;
+    const col = columnExtent(L, r.cx, r.by0, r.by1);
+    const cardH = col.bottom - col.top;
+    const topFrac = (r.by0 - col.top) / cardH;
+    const sizeFrac = r.h / cardH;
+    if (topFrac > 0.12 || sizeFrac < 0.06 || sizeFrac > 0.3) continue;
+    const f = {
+      sr: rank.score, mrr: rank.score - rank.second, mrs: rank.score - Math.max(suit.score, suit180.score), mro: 0.5,
+      ss: 0, mss: 0, msr: 0.1, gap: 0.2, dx: 0, top: topFrac, size: sizeFrac, ratio: 0.7,
+    };
+    const p = Math.min(0.6, rankProbability(f) * 0.6);
+    if (p >= MIN_PROBABILITY) picks.push({ r, p });
+  }
+  picks.sort((a, b) => b.p - a.p);
+  const taken = [];
+  const cards = [];
+  for (const { r, p } of picks) {
+    if (taken.some((t) => conflicts(t, r))) continue;
+    taken.push(r);
+    cards.push(makeCard(r, null, p, region, L));
+  }
+  return cards;
+}
+
+// A glyph that touches the card outline gets flooded as "outside" together
+// with the outline. Take back dark outside pixels that have this card's face
+// within `reach` pixels on at least three of the four sides; an outline only
+// has the face on one side.
+function reclaimTouchingInk(state, bw, bh, isDark, reach) {
+  const M = bw * bh;
+  const cap = Math.min(255, reach + 1);
+  const near = new Uint8Array(M);
+  for (let y = 0; y < bh; y++) {
+    const row = y * bw;
+    let d = cap;
+    for (let x = 0; x < bw; x++) {
+      d = state[row + x] === 1 ? 0 : Math.min(cap, d + 1);
+      if (d <= reach) near[row + x]++;
+    }
+    d = cap;
+    for (let x = bw - 1; x >= 0; x--) {
+      d = state[row + x] === 1 ? 0 : Math.min(cap, d + 1);
+      if (d <= reach) near[row + x]++;
+    }
+  }
+  for (let x = 0; x < bw; x++) {
+    let d = cap;
+    for (let y = 0; y < bh; y++) {
+      const q = y * bw + x;
+      d = state[q] === 1 ? 0 : Math.min(cap, d + 1);
+      if (d <= reach) near[q]++;
+    }
+    d = cap;
+    for (let y = bh - 1; y >= 0; y--) {
+      const q = y * bw + x;
+      d = state[q] === 1 ? 0 : Math.min(cap, d + 1);
+      if (d <= reach) near[q]++;
+    }
+  }
+  for (let q = 0; q < M; q++) {
+    if (state[q] === 2 && near[q] >= 3 && isDark(q)) state[q] = 0;
+  }
 }
 
 // Rows r0..r1 of component g, with the bounding box of its pixels there.
@@ -614,7 +733,8 @@ function columnExtent(L, lx, ly0, ly1) {
   return { top: t, bottom: b + 1 };
 }
 
-function scorePair(r, s, L) {
+// Geometry gates and features for "rank r with suit s printed below it".
+function pairFeatures(r, s, L) {
   const rh = r.h;
   const gap = s.by0 - r.by1;
   if (gap < -0.15 * rh || gap > 0.9 * rh) return null;
@@ -622,6 +742,7 @@ function scorePair(r, s, L) {
   if (ratio < 0.3 || ratio > 1.5) return null;
   const dx = Math.abs(s.cx - r.cx);
   if (dx > 0.5 * Math.max(r.w, s.w) + 0.1 * rh) return null;
+  // Corner indices sit near the top of the card and are small relative to it.
   const col = columnExtent(L, r.cx, r.by0, s.by1);
   const cardH = col.bottom - col.top;
   const topFrac = (r.by0 - col.top) / cardH;
@@ -629,7 +750,8 @@ function scorePair(r, s, L) {
   if (topFrac > 0.2 || sizeFrac > 0.27 || sizeFrac < 0.04) return null;
   const R = r.cls;
   const S = s.cls;
-  const f = {
+  if (!looksLikeSuit(S)) return null;
+  return {
     sr: R.rank.score,
     mrr: R.rank.score - R.rank.second,
     mrs: R.rank.score - Math.max(R.suit.score, R.suit180.score),
@@ -643,34 +765,82 @@ function scorePair(r, s, L) {
     size: sizeFrac,
     ratio,
   };
-  return { r, s, f, score: pairScore(f) };
 }
 
-function pairScore(f) {
-  const qr = clamp01((f.sr - 0.45) / 0.35) * clamp01((Math.min(f.mrr, f.mrs, f.mro) + 0.03) / 0.12);
-  const qs = clamp01((f.ss - 0.4) / 0.35) * clamp01((Math.min(f.mss, f.msr) + 0.05) / 0.12);
-  const geo = clamp01(1 - Math.max(0, f.gap - 0.5) * 1.5)
-    * clamp01(1 - Math.max(0, f.dx - 0.25) * 2)
-    * clamp01(1 - Math.max(0, f.top - 0.12) * 5)
-    * clamp01(1 - Math.max(0, f.size - 0.22) * 8);
-  return qr * Math.sqrt(qs) * geo;
+function looksLikeSuit(S) {
+  return S.suit.score >= 0.45 && S.suit.score - Math.max(S.rank.score, S.suit180.score, S.other.score) >= -0.1;
 }
 
-function makeCard(pr, region, L) {
-  const { r, s } = pr;
+// Same features for a suit printed to the right of the rank.
+function rowPairFeatures(r, s, L) {
+  const rh = r.h;
+  const gap = s.bx0 - r.bx1;
+  if (gap < -0.1 * rh || gap > 0.7 * rh) return null;
+  const ratio = s.h / rh;
+  if (ratio < 0.3 || ratio > 1.2) return null;
+  const scy = (s.by0 + s.by1) / 2;
+  if (scy < r.by0 + 0.2 * rh || scy > r.by1 + 0.1 * rh) return null;
+  const col = columnExtent(L, r.cx, r.by0, r.by1);
+  const cardH = col.bottom - col.top;
+  const topFrac = (r.by0 - col.top) / cardH;
+  const sizeFrac = rh / cardH;
+  if (topFrac > 0.2 || sizeFrac > 0.3 || sizeFrac < 0.04) return null;
+  const R = r.cls;
+  const S = s.cls;
+  if (!looksLikeSuit(S)) return null;
+  return {
+    sr: R.rank.score,
+    mrr: R.rank.score - R.rank.second,
+    mrs: R.rank.score - Math.max(R.suit.score, R.suit180.score),
+    mro: r.splitPart ? R.rank.score - R.other.score : 0.5,
+    ss: S.suit.score,
+    mss: S.suit.score - S.suit.second,
+    msr: S.suit.score - Math.max(S.rank.score, S.suit180.score, S.other.score),
+    gap: gap / rh,
+    dx: Math.abs(scy - (r.by0 + r.by1) / 2) / rh,
+    top: topFrac,
+    size: sizeFrac,
+    ratio,
+  };
+}
+
+// Logistic model of "the rank is read correctly", fitted on rendered tables
+// (clean, JPEG and rescaled) and validated on held-out styles.
+const MODEL = { bias: -9.1, sr: 12.2, mrr: 1.4, mrs: 4.7, mro: 9.5, msr: 1.2, gap: -6.1, dx: -9.4, lratio: -1.6 };
+
+function rankProbability(f) {
+  const clip = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
+  const z = MODEL.bias
+    + MODEL.sr * clip(f.sr, 0, 1)
+    + MODEL.mrr * clip(f.mrr, -0.2, 0.35)
+    + MODEL.mrs * clip(f.mrs, -0.3, 0.4)
+    + MODEL.mro * clip(f.mro, -0.3, 0.3)
+    + MODEL.msr * clip(f.msr, -0.3, 0.4)
+    + MODEL.gap * clip(f.gap, -0.2, 1)
+    + MODEL.dx * clip(f.dx, 0, 0.8)
+    + MODEL.lratio * Math.abs(Math.log(clip(f.ratio, 0.2, 2) / 0.7));
+  return 1 / (1 + Math.exp(-z));
+}
+
+// Which glyph below a rank is its suit: a clear suit shape, close and centred.
+function suitPick(f) {
+  return f.ss + 0.5 * Math.min(f.mss, 0.2) + 0.5 * Math.min(f.msr, 0.3) - 0.5 * Math.max(0, f.gap - 0.5) - Math.max(0, f.dx - 0.25);
+}
+
+function makeCard(r, option, p, region, L) {
+  const s = option ? option.s : r;
   const bx0 = Math.min(r.bx0, s.bx0);
-  const by0 = r.by0;
   const bx1 = Math.max(r.bx1, s.bx1);
-  const by1 = s.by1;
   return {
     rank: r.cls.rank.label,
-    suit: s.cls.suit.label,
+    // Spades and clubs blur together in tiny images; say so rather than guess.
+    suit: !option || option.f.mss < 0.02 ? null : s.cls.suit.label,
     color: r.color,
-    confidence: calibrate(pr),
+    confidence: Math.round(p * 100) / 100,
     region: region.id,
     rankH: r.h,
     // working-resolution boxes, converted to original pixels in assemble()
-    wbox: { x0: L.x0 + bx0, y0: L.y0 + by0, x1: L.x0 + bx1, y1: L.y0 + by1 },
+    wbox: { x0: L.x0 + bx0, y0: L.y0 + Math.min(r.by0, s.by0), x1: L.x0 + bx1, y1: L.y0 + Math.max(r.by1, s.by1) },
     regionBox: { x0: region.x0, y0: region.y0, x1: region.x1, y1: region.y1 },
     alternatives: r.cls.ranking.slice(1, 3).map((a) => a.label),
   };
@@ -688,9 +858,6 @@ function dropCentreArt(cards) {
   }
 }
 
-function calibrate(pr) {
-  return Math.round(clamp01(pr.score) * 100) / 100;
-}
 
 // Drop detections whose index size is far from the rest (decorations, artwork).
 function suppressOutliers(cards) {
