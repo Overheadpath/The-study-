@@ -69,3 +69,11 @@ You should see JSON output containing:
 - Add authentication tokens/session management.
 - Add push notifications for parent approvals.
 - Add image upload storage (S3/Firebase/etc.).
+
+## Blackjack Strategy Lab
+
+`blackjack-trainer/` holds a separate, self-contained educational web app for learning blackjack basic strategy with virtual practice chips: hand and screenshot analysis, a practice simulator with accuracy tracking, and explanations of the probability behind each decision. See [blackjack-trainer/README.md](blackjack-trainer/README.md).
+
+```bash
+cd blackjack-trainer && npm start
+```
