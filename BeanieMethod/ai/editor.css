@@ -141,6 +141,7 @@ a.btn { text-decoration: none; display: inline-block; }
 .upload-bar div { height: 100%; width: 0; background: var(--grad); transition: width .2s; }
 .section-title { display: flex; align-items: center; gap: 8px; font-weight: 700; margin-bottom: 10px; }
 .recent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.recent-grid > .muted, .recent-grid > .btn { grid-column: 1 / -1; justify-self: start; }
 .clip-card {
   background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; cursor: pointer;
   text-align: left; padding: 0; transition: border-color .15s, transform .15s;
