@@ -1,0 +1,59 @@
+name: Beanie AI
+
+on:
+  push:
+    paths: ["beanie-ai/**", ".github/workflows/beanie-ai.yml"]
+  pull_request:
+    paths: ["beanie-ai/**", ".github/workflows/beanie-ai.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows (real launcher)
+    runs-on: windows-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: beanie-ai
+    steps:
+      - uses: actions/checkout@v4
+      - name: First launch downloads Python and ffmpeg, then self test
+        shell: cmd
+        env:
+          BEANIE_NO_SHORTCUT: "1"
+        run: call "Start Beanie AI.bat" --selftest
+      - name: Second launch reuses the setup
+        shell: cmd
+        env:
+          BEANIE_NO_SHORTCUT: "1"
+        run: call "Start Beanie AI.bat" --selftest
+      - name: Windows folders
+        shell: cmd
+        run: .python\python.exe -c "from beanie_ai import config, ffmpeg_tools as ff; print(config.videos_folder()); print(config.app_data_dir()); print(config.exports_dir()); print(ff.ffmpeg_exe(), ff.h264_args('export'))"
+      - name: Unit tests
+        shell: cmd
+        run: .python\python.exe -m unittest discover -s tests -v
+
+  linux:
+    name: Linux (all tests + browser)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: beanie-ai
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          pip install -r requirements.txt playwright
+          python -m playwright install --with-deps chromium
+      - name: Tests
+        run: python -m unittest discover -s tests -v
+      - name: Self test
+        run: python -m beanie_ai --selftest

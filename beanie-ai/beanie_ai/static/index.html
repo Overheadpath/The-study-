@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Beanie AI</title>
+  <link rel="icon" href="/static/beanie.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="/static/beanie.svg" alt="" class="brand-logo">
+      <span class="brand-name">Beanie <b>AI</b></span>
+    </div>
+    <div class="top-actions">
+      <button class="btn ghost" id="btn-clips" title="Your clips">🎬 My clips</button>
+      <button class="btn ghost" id="btn-sounds" title="Sound effects and music">🔊 Sounds</button>
+      <button class="pill" id="brain-pill" title="The AI brain">🧠 Checking…</button>
+      <button class="btn primary small" id="btn-setup">Set up AI</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="chat" aria-label="Chat with Beanie">
+      <div class="chat-log" id="chat-log" aria-live="polite"></div>
+      <div class="chips" id="chips"></div>
+      <form class="composer" id="composer" autocomplete="off">
+        <textarea id="input" rows="1" placeholder="Tell Beanie what to do…" aria-label="Message"></textarea>
+        <button class="send" id="send" type="submit" aria-label="Send">➤</button>
+      </form>
+    </section>
+
+    <section class="editor" id="editor" aria-label="Editor"></section>
+  </main>
+
+  <div class="modal-back" id="modal-back" hidden>
+    <div class="modal" role="dialog" aria-modal="true" id="modal"></div>
+  </div>
+  <div class="toast" id="toast" hidden></div>
+
+  <template id="tpl-import">
+    <div class="import">
+      <label class="drop" id="drop">
+        <input type="file" id="file" accept="video/*,.mkv" hidden>
+        <div class="drop-icon">🎬</div>
+        <div class="drop-title">Drop your Roblox clip here</div>
+        <div class="drop-sub">or <span class="link">choose a video</span> · MP4, MKV, MOV</div>
+        <div class="upload-bar" hidden><div></div></div>
+      </label>
+      <div class="recent">
+        <div class="section-title">Recent recordings <button class="btn tiny ghost" id="recent-refresh">↻</button></div>
+        <div class="recent-grid" id="recent-grid"><div class="muted">Looking…</div></div>
+      </div>
+      <details class="howto">
+        <summary>How do I record my steals?</summary>
+        <ol>
+          <li>Open Roblox and press <kbd>Win</kbd> + <kbd>Alt</kbd> + <kbd>R</kbd> to start recording. Press it again to stop.</li>
+          <li>Even better: in Windows Settings → Gaming → Captures, turn on <b>Record what happened</b>. Then press
+            <kbd>Win</kbd> + <kbd>Alt</kbd> + <kbd>G</kbd> right after a steal to save the last 30 seconds.</li>
+          <li>Your recordings show up above automatically.</li>
+        </ol>
+      </details>
+    </div>
+  </template>
+
+  <template id="tpl-project">
+    <div class="project">
+      <div class="project-head">
+        <input class="project-name" id="project-name" aria-label="Clip name" maxlength="40">
+        <div class="seg" role="tablist">
+          <button class="seg-btn" data-view="edited" role="tab">✨ Edited</button>
+          <button class="seg-btn" data-view="original" role="tab">🎞️ Original</button>
+        </div>
+      </div>
+      <div class="stage" id="stage">
+        <video id="vid-edited" playsinline controls preload="auto"></video>
+        <video id="vid-original" playsinline controls preload="auto"></video>
+        <div class="stage-overlay" id="stage-overlay" hidden>
+          <div class="spinner"></div>
+          <div id="stage-text">Making preview…</div>
+          <div class="bar"><div id="stage-bar"></div></div>
+        </div>
+        <button class="stale-badge" id="stale-badge" hidden>Preview is out of date · Update</button>
+        <button class="stage-badge" id="stage-badge" hidden title="Watch the edited version"><span class="mini-spin"></span><span id="stage-badge-text">Making preview…</span></button>
+      </div>
+      <div class="timeline-wrap">
+        <div class="timeline" id="timeline" title="Click to jump to a moment in the original clip">
+          <div class="tl-thumbs" id="tl-thumbs"></div>
+          <div class="tl-layer" id="tl-layer"></div>
+          <div class="tl-head" id="tl-head"></div>
+        </div>
+        <div class="timeline-tools">
+          <button class="btn small" id="btn-mark" title="Mark the steal at the current moment (M)">📍 Mark steal here</button>
+          <span class="time" id="tl-time">0.0s</span>
+          <span class="spacer"></span>
+          <button class="btn small ghost" id="btn-watch" title="Let the AI watch your clip and find the steal">👀 Find the steal</button>
+        </div>
+      </div>
+      <div class="panel steps-panel">
+        <div class="section-title">
+          Edit <span class="muted" id="out-length"></span>
+          <span class="spacer"></span>
+          <button class="btn tiny ghost" id="btn-undo" title="Undo">↩️ Undo</button>
+          <button class="btn tiny ghost" id="btn-redo" title="Redo">↪️ Redo</button>
+        </div>
+        <ul class="steps" id="steps"></ul>
+      </div>
+      <div class="export-row">
+        <button class="btn primary big" id="btn-export">⬇️ Export HD video</button>
+        <div class="export-progress" id="export-progress" hidden><div class="bar"><div id="export-bar"></div></div><span id="export-text"></span></div>
+      </div>
+      <div class="exports" id="exports"></div>
+    </div>
+  </template>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

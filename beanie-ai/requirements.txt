@@ -1,0 +1,2 @@
+# The video tools (a copy of ffmpeg made for this PC)
+imageio-ffmpeg>=0.5.1
