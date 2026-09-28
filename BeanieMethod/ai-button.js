@@ -1,6 +1,6 @@
-// The popup's "AI Editor" button: opens the editor in a full tab (or brings the open one forward).
-// Kept apart from popup.js so it always works, whatever the rest of the popup is doing.
-document.getElementById("openAiEditor").addEventListener("click", async () => {
+// The popup's "AI Editor" buttons: open the editor in a full tab (or bring the open one forward).
+// Kept apart from popup.js so they always work, whatever the rest of the popup is doing.
+async function openAiEditor() {
   const url = chrome.runtime.getURL("ai/editor.html");
   try {
     const [open] = await chrome.tabs.query({ url });
@@ -14,4 +14,9 @@ document.getElementById("openAiEditor").addEventListener("click", async () => {
     window.open(url, "_blank");
   }
   window.close();
-});
+}
+
+for (const id of ["openAiEditor", "openAiEditorScanning"]) {
+  const button = document.getElementById(id);
+  if (button) button.addEventListener("click", openAiEditor);
+}

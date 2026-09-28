@@ -153,6 +153,22 @@ const skipTotalsCb = document.getElementById("skipTotals");
 const skipScanBtn = document.getElementById("skipScan");
 const scanTotalsAgainBtn = document.getElementById("scanTotalsAgain");
 const useDeeplinkCb = document.getElementById("useDeeplink");
+const autoRefreshCb = document.getElementById("autoRefresh");
+
+// Brainrot UI Elements
+const totalBrainrotsEl = document.getElementById("totalBrainrots");
+const ownedBrainrotsEl = document.getElementById("ownedBrainrots");
+const missingBrainrotsEl = document.getElementById("missingBrainrots");
+const completionRateEl = document.getElementById("completionRate");
+const notifyMissingCb = document.getElementById("notifyMissing");
+const showOwnedOnlyCb = document.getElementById("showOwnedOnly");
+const refreshBrainrotsBtn = document.getElementById("refreshBrainrots");
+const clearBrainrotCacheBtn = document.getElementById("clearBrainrotCache");
+const brainrotStatusEl = document.getElementById("brainrotStatus");
+const brainrotsListEl = document.getElementById("brainrotsList");
+const uniquePlayersCountEl = document.getElementById("uniquePlayersCount");
+const sendBulkRequestsBtn = document.getElementById("sendBulkRequests");
+const scanMutualsBtn = document.getElementById("scanMutuals");
 
 // Friend UI Elements
 const tabServers = document.getElementById("tabServers");
@@ -261,7 +277,7 @@ function stopAutoRefresh() {
 
 function setButtonsDisabled(v) {
   document.querySelectorAll("button").forEach(b => {
-    if (b.id === "skipScan") return;
+    if (b.id === "skipScan" || b.id.startsWith("openAiEditor")) return;  // the AI Editor opens any time
     b.disabled = v;
   });
 }

@@ -39,6 +39,11 @@ body {
   box-shadow: 0 4px 14px -6px #00a2ffaa;
 }
 
+/* the same button in the "Scanning..." box, so the editor opens any time */
+.loading-box .ai-editor-btn {
+  margin: 8px 0 0;
+}
+
 .ai-editor-btn span {
   font-weight: 400;
   font-size: 11px;

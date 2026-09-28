@@ -108,9 +108,18 @@ class ExtensionTest(unittest.TestCase):
             if "/ai/editor.html" in p.url:
                 p.close()
         popup = self.ctx.new_page()
+        errors = []
+        popup.on("pageerror", lambda e: errors.append(str(e)))
         popup.goto(f"{self.base}/popup.html")
-        button = popup.locator("[data-testid=open-ai-editor]")
-        self.assertIn("AI Editor", button.inner_text())
+        # the popup script runs all the way (it turns the music on part way through; a missing
+        # variable used to stop it before that); Roblox itself may not be reachable from tests
+        popup.wait_for_function("() => document.querySelector('#toggleMusic').textContent.includes('ON')", timeout=10000)
+        popup.wait_for_timeout(500)
+        self.assertEqual([e for e in errors if "is not defined" in e], [])
+        self.assertIn("AI Editor", popup.locator("[data-testid=open-ai-editor]").inner_text())
+        # while Beanie Pro scans servers, the "Scanning..." box has its own AI Editor button
+        scanning = popup.locator("#loadingOverlay:not(.hidden)").count() > 0
+        button = popup.locator("[data-testid=open-ai-editor-scanning]" if scanning else "[data-testid=open-ai-editor]")
         with self.ctx.expect_page() as info:
             button.click()
         editor = info.value
