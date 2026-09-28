@@ -189,8 +189,9 @@ class ServerTest(unittest.TestCase):
 
     def test_markers_and_watch(self):
         pid, _ = self.new_project()
+        self.post_json(f"/api/projects/{pid}/markers", {"t": 9.0, "label": "steal"})
         out = self.post_json(f"/api/projects/{pid}/markers", {"t": 6.02, "label": "steal"})
-        self.assertEqual(out["project"]["markers"][0]["t"], 6.02)
+        self.assertEqual([m["t"] for m in out["project"]["markers"]], [6.02], "marking again moves the mark")
         events = self.stream(f"/api/projects/{pid}/chat", {"message": "zoom on the steal"})
         self.assertEqual(events[-1]["project"]["plan"]["zoom"][0]["at"], 6.02)
         mid = out["project"]["markers"][0]["id"]

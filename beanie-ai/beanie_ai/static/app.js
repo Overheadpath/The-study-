@@ -408,6 +408,7 @@ async function pollProject(id) {
 
 function applyState(state) {
   if (!S.project || state.id !== S.project.id) return;
+  if (state.plan_version !== S.project.plan_version) S.showNextPreview = true;  // an edit: show its result
   S.project = state;
   renderProject();
 }
@@ -485,7 +486,6 @@ function mountProject() {
   };
   tl.onpointermove = (e) => { if (dragging) seekFromEvent(e); };
   tl.onpointerup = () => { dragging = false; };
-  requestAnimationFrame(tickPlayhead);
 }
 
 function setView(view) {
@@ -530,8 +530,9 @@ function updateStale() {
 }
 
 function tickPlayhead() {
+  requestAnimationFrame(tickPlayhead);
   const head = $("#tl-head");
-  if (!head || !S.project) return;
+  if (!head || !S.project || !S.project.info) return;
   const dur = S.project.info.duration;
   let t = null;
   if (S.view === "original") {
@@ -545,7 +546,6 @@ function tickPlayhead() {
     head.style.left = `${(clamp(t, 0, dur) / dur) * 100}%`;
     $("#tl-time").textContent = fmt(t);
   }
-  requestAnimationFrame(tickPlayhead);
 }
 
 /** Edited-video time -> clip time, using the plan's segments. */
@@ -651,9 +651,11 @@ async function markHere() {
   const t = playerTime();
   if (t == null) return;
   try {
+    const before = new Set(S.project.markers.map((m) => m.id));
     const { project } = await API.post(`/api/projects/${S.project.id}/markers`, { t, view: S.view, label: "steal" });
     applyState(project);
-    toast(`📍 Marked the steal at ${fmt(project.markers.find((m) => m.label === "steal")?.t ?? t)}. Now say **make a W edit**!`);
+    const added = project.markers.find((m) => !before.has(m.id));
+    toast(`📍 Marked the steal at ${fmt(added ? added.t : t)}. Now say **make a W edit**!`);
   } catch (e) { toast(e.message); }
 }
 
@@ -734,7 +736,10 @@ async function runPreview() {
     if (seq !== S.previewSeq) return;
     if (last && last.type === "done") {
       applyState(last.project);
-      playPreview();
+      if (S.showNextPreview && !S.project.preview_stale) {
+        S.showNextPreview = false;
+        playPreview();
+      }
     } else if (last && last.type === "busy") {
       schedulePreview(3000);  // something bigger is running (export, watching): try again soon
     } else if (last && last.type === "error") toast(`Preview problem: ${last.message}`, 6000);
@@ -1096,6 +1101,7 @@ function boot() {
     const file = e.dataTransfer.files && e.dataTransfer.files[0];
     if (file) uploadFile(file);
   });
+  requestAnimationFrame(tickPlayhead);
   loadStatus().then(() => {
     const last = remember("beanie.project");
     if (last) openProject(last); else showHome();

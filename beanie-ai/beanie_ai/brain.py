@@ -92,7 +92,7 @@ class OllamaClient:
     def chat(self, model, messages, schema=None, options=None, timeout=600):
         """Stream a chat answer. Yields pieces of the answer's text."""
         body = {"model": model, "messages": messages, "stream": True, "keep_alive": "30m",
-                "options": {"temperature": 0.4, "num_ctx": 8192, "num_predict": 900, **(options or {})}}
+                "options": {"temperature": 0.4, "num_ctx": 6144, "num_predict": 900, **(options or {})}}
         if schema is not None:
             body["format"] = schema
         for chunk in self._stream("/api/chat", body, timeout):

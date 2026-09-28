@@ -162,7 +162,9 @@ class Project:
             t = round(max(0.0, min(float(t), self.info.duration)), 2)
             label = re.sub(r"\s+", " ", str(label or "steal")).strip()[:30] or "steal"
             marker = {"id": secrets.token_hex(3), "t": t, "label": label}
-            self.data["markers"] = sorted(self.data["markers"] + [marker], key=lambda m: m["t"])[-20:]
+            # Marking the steal again moves the mark (one "steal", one "fail"...).
+            others = [m for m in self.data["markers"] if m["label"].lower() != label.lower()]
+            self.data["markers"] = sorted(others + [marker], key=lambda m: m["t"])[-20:]
             self.save()
             return marker
 
