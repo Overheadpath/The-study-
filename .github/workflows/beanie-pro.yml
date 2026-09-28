@@ -1,0 +1,57 @@
+name: Beanie Pro
+
+on:
+  push:
+    paths: ["BeanieMethod/**", ".github/workflows/beanie-pro.yml"]
+  pull_request:
+    paths: ["BeanieMethod/**", ".github/workflows/beanie-pro.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    env:
+      BEANIE_SHOTS: ${{ github.workspace }}/shots
+    defaults:
+      run:
+        working-directory: BeanieMethod
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Engine tests (plan, commands, skills, AI brain, sounds)
+        run: node --test "tests/*.test.mjs"
+      - name: Install Playwright and ffmpeg
+        run: pip install playwright imageio-ffmpeg
+      - name: Install Chromium (Linux)
+        if: runner.os == 'Linux'
+        run: python -m playwright install --with-deps chromium
+      - name: Install Chromium (Windows)
+        if: runner.os == 'Windows'
+        run: python -m playwright install chromium
+      - name: The extension in Chromium (popup, editor, export, Ollama)
+        working-directory: BeanieMethod/tests
+        run: python -m unittest -v test_extension
+      - name: The editor in Google Chrome (H.264 + AAC recordings)
+        working-directory: BeanieMethod/tests
+        run: python -m unittest -v test_real_chrome
+      - name: Screenshots and exported videos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beanie-pro-${{ matrix.os }}
+          path: shots
+          if-no-files-found: ignore

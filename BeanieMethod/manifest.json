@@ -1,7 +1,7 @@
 {
   "name": "Beanie Pro",
-  "description": "Beanie Method — Pro edition. Complete automation for Steal a Brainrot.",
-  "version": "2.0.0",
+  "description": "Beanie Method — Pro edition. Complete automation for Steal a Brainrot, plus an AI video editor for your steal clips.",
+  "version": "2.1.0",
   "manifest_version": 3,
 
   "action": {
@@ -21,8 +21,8 @@
     "128": "icons/icon128.png"
   },
 
-  "permissions": ["tabs", "scripting", "storage", "cookies", "notifications"],
-  "host_permissions": ["https://*.roblox.com/*"],
+  "permissions": ["tabs", "scripting", "storage", "cookies", "notifications", "declarativeNetRequest", "downloads", "unlimitedStorage"],
+  "host_permissions": ["https://*.roblox.com/*", "http://127.0.0.1/*", "http://localhost/*"],
 
   "content_scripts": [
     {

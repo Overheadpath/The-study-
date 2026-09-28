@@ -21,6 +21,34 @@ body {
   color: #00a2ff;
 }
 
+/* AI Editor button */
+.ai-editor-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 9px;
+  font-weight: 600;
+  font-size: 13px;
+  color: #fff;
+  background: linear-gradient(135deg, #00a2ff, #6c5cff);
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 14px -6px #00a2ffaa;
+}
+
+.ai-editor-btn span {
+  font-weight: 400;
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.ai-editor-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1aaeff, #7d6fff);
+}
+
 /* Tabs */
 .tabs {
   display: flex;

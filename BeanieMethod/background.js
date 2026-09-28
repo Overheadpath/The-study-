@@ -50,6 +50,28 @@ chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
     console.log('Beanie Pro installed!');
   } else if (details.reason === 'update') {
-    console.log('Beanie Pro updated to v2.0!');
+    console.log(`Beanie Pro updated to v${chrome.runtime.getManifest().version}!`);
   }
+  allowOllama();
 });
+
+chrome.runtime.onStartup.addListener(allowOllama);
+
+// AI Editor: Ollama (the local AI app) refuses requests that carry a browser extension's
+// Origin header. This rule removes it, only for Beanie Pro's own requests to this PC.
+// (The same rule as ai/js/platform.js; the editor page also sets it when it opens.)
+function allowOllama() {
+  chrome.declarativeNetRequest.updateDynamicRules({
+    removeRuleIds: [11434],
+    addRules: [{
+      id: 11434,
+      priority: 1,
+      action: { type: 'modifyHeaders', requestHeaders: [{ header: 'origin', operation: 'remove' }] },
+      condition: {
+        requestDomains: ['127.0.0.1', 'localhost'],
+        initiatorDomains: [chrome.runtime.id],
+        resourceTypes: ['xmlhttprequest', 'other']
+      }
+    }]
+  }).catch((e) => console.warn('Beanie Pro: could not set up the Ollama rule', e));
+}

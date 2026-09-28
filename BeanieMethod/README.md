@@ -1,8 +1,38 @@
-# 🎯 Beanie Pro v2.0
+# 🎯 Beanie Pro v2.1
 
 **The ultimate quality-of-life extension for Steal a Brainrot on Roblox**
 
 Beanie Pro is a comprehensive Chrome extension designed to help players of "Steal a Brainrot" track, index, and automate repetitive tasks in a safe and legitimate way.
+
+---
+
+## 🎬 New in v2.1: the AI Editor
+
+Beanie turns your steal recordings into TikTok / YouTube Shorts edits. Click the Beanie Pro icon, then
+**🎬 AI Editor**. It opens in its own tab.
+
+1. **Add a clip**: drop your recording in, or press **📂 Pick folder** once and choose your **Videos** folder
+   (Windows Game Bar saves recordings in Videos → Captures). Beanie finds the loading screens, menus and loud moments.
+2. **Tell Beanie what to do** in the chat: *make a W edit*, *fail edit*, *cut the boring parts*, *zoom at 6*,
+   *slow mo here*, *add a skull at the end*, *boom at 6*, *add text "EZ STEAL" at the top*, *undo*…
+   Or tap the quick buttons under the chat. Pause at the steal and press **📍 Mark steal here** so Beanie knows the moment.
+3. **Watch the preview**: it updates instantly after every change.
+4. **⬇️ Export video**: a 1080×1920 MP4 goes to **Downloads → Beanie Pro**, ready to post.
+
+**The AI brain** (for chatting and edits in your own words) runs on your PC. Nothing leaves your computer.
+Click **Set up AI** in the editor and pick one:
+
+- **Chrome's built-in AI** (Gemini Nano): nothing to install. Chrome downloads it once (about 2 GB). It needs
+  Chrome 138 or newer on Windows 10/11 or Mac, about 22 GB of free disk space, and a graphics card with more than
+  4 GB of memory (or 16 GB of RAM).
+- **Ollama** (free app from [ollama.com](https://ollama.com/download)): install it, then press **Download** next to
+  `gemma3:4b` in Set up AI. It can also watch your clip and find the steal for you (**👀 Find the steal**).
+
+Without an AI, clear commands and the quick buttons still work (Basic mode).
+
+Everything happens inside Chrome: the video is read, edited and encoded with WebCodecs, using
+[Mediabunny](https://mediabunny.dev) (`ai/vendor`, MPL-2.0). The editor's code is in `ai/`, its tests in `tests/`
+(`node --test "tests/*.test.mjs"`, then `python -m unittest` in `tests/` with Playwright installed).
 
 ---
 
@@ -83,16 +113,23 @@ Beanie Pro is a comprehensive Chrome extension designed to help players of "Stea
 1. Open Chrome and go to `chrome://extensions/`
 2. Enable **Developer mode** (toggle in top right)
 3. Click **Load unpacked**
-4. Select the `BeanieMethod` folder
+4. Select the `BeanieMethod` folder (the folder that has `manifest.json` directly inside it; if Chrome says
+   "Manifest file is missing", you picked the folder around it)
 5. The extension icon should appear in your toolbar
 
+Updating: replace the files in the same folder, then press ↻ on Beanie Pro in `chrome://extensions/`.
+Your clips and settings stay.
+
 ### Permissions Required
-- **tabs**: To interact with Roblox tabs
+- **tabs**: To interact with Roblox tabs (and to find the AI Editor tab)
 - **scripting**: To inject join scripts
 - **storage**: To save settings and cache
 - **cookies**: To maintain Roblox session
 - **notifications**: For desktop Brainrot alerts
-- **host_permissions**: Access to `*.roblox.com`
+- **downloads**: To save your edited videos to Downloads → Beanie Pro
+- **unlimitedStorage**: To keep your clips in the AI Editor
+- **declarativeNetRequest**: Lets the AI Editor talk to Ollama on your PC (only Beanie Pro's own requests to 127.0.0.1)
+- **host_permissions**: Access to `*.roblox.com`, and to `127.0.0.1` / `localhost` for Ollama
 
 ---
 

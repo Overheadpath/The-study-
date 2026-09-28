@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Beanie Pro · AI Editor</title>
+  <link rel="icon" href="../icons/icon32.png" type="image/png">
+  <link rel="stylesheet" href="editor.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="../icons/icon48.png" alt="" class="brand-logo">
+      <span class="brand-name"><span class="accent">Beanie</span> Pro <b>AI Editor</b></span>
+    </div>
+    <div class="top-actions">
+      <button class="btn ghost" id="btn-clips" type="button" title="Your clips">🎬 My clips</button>
+      <button class="btn ghost" id="btn-sounds" type="button" title="Sound effects and music">🔊 Sounds</button>
+      <button class="pill" id="brain-pill" type="button" title="The AI brain">🧠 Checking…</button>
+      <button class="btn primary small" id="btn-setup" type="button">Set up AI</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="chat" aria-label="Chat with Beanie">
+      <div class="chat-log" id="chat-log" aria-live="polite"></div>
+      <div class="chips" id="chips"></div>
+      <form class="composer" id="composer" autocomplete="off">
+        <textarea id="input" rows="1" placeholder="Tell Beanie what to do…" aria-label="Message"></textarea>
+        <button class="send" id="send" type="submit" aria-label="Send">➤</button>
+      </form>
+    </section>
+
+    <section class="editor" id="editor" aria-label="Editor"></section>
+  </main>
+
+  <div class="modal-back" id="modal-back" hidden>
+    <div class="modal" role="dialog" aria-modal="true" id="modal"></div>
+  </div>
+  <div class="toast" id="toast" hidden></div>
+
+  <template id="tpl-import">
+    <div class="import">
+      <label class="drop" id="drop">
+        <input type="file" id="file" accept="video/*,.mkv,.mov" hidden>
+        <div class="drop-icon">🎬</div>
+        <div class="drop-title">Drop your Roblox clip here</div>
+        <div class="drop-sub">or <span class="link">choose a video</span> · MP4, MKV, MOV, WebM</div>
+        <div class="upload-bar" hidden><div></div></div>
+        <div class="drop-status muted" id="drop-status"></div>
+      </label>
+      <div class="recent">
+        <div class="section-title">Your recordings
+          <span class="spacer"></span>
+          <button class="btn tiny ghost" id="recent-folder" type="button">📂 Pick folder</button>
+          <button class="btn tiny ghost" id="recent-refresh" type="button" title="Look again">↻</button>
+        </div>
+        <div class="recent-grid" id="recent-grid"></div>
+      </div>
+      <details class="howto">
+        <summary>How do I record my steals?</summary>
+        <ol>
+          <li>Open Roblox and press <kbd>Win</kbd> + <kbd>Alt</kbd> + <kbd>R</kbd> to start recording. Press it again to stop.</li>
+          <li>Even better: in Windows Settings → Gaming → Captures, turn on <b>Record what happened</b>. Then press
+            <kbd>Win</kbd> + <kbd>Alt</kbd> + <kbd>G</kbd> right after a steal to save the last 30 seconds.</li>
+          <li>Press <b>📂 Pick folder</b> above and choose your <b>Videos</b> folder once. Your recordings show up here.</li>
+        </ol>
+      </details>
+    </div>
+  </template>
+
+  <template id="tpl-project">
+    <div class="project">
+      <div class="project-head">
+        <input class="project-name" id="project-name" aria-label="Clip name" maxlength="40">
+        <div class="seg" role="tablist">
+          <button class="seg-btn" data-view="edited" role="tab" type="button">✨ Edited</button>
+          <button class="seg-btn" data-view="original" role="tab" type="button">🎞️ Original</button>
+        </div>
+      </div>
+      <div class="stage" id="stage">
+        <canvas id="edited-canvas" width="540" height="960" title="Click to play or pause"></canvas>
+        <video id="vid-original" playsinline controls preload="auto"></video>
+        <video id="vid-source" playsinline preload="auto" hidden></video>
+        <div class="stage-overlay" id="stage-overlay" hidden>
+          <div class="spinner"></div>
+          <div id="stage-text">Working…</div>
+          <div class="bar"><div id="stage-bar"></div></div>
+        </div>
+      </div>
+      <div class="controls" id="edited-controls">
+        <button class="btn small play" id="btn-play" type="button" aria-label="Play" data-state="paused">
+          <svg class="i-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>
+          <svg class="i-pause" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z"/></svg>
+        </button>
+        <input type="range" id="scrub" min="0" max="1000" value="0" step="1" aria-label="Position in the edited video">
+        <span class="time" id="edited-time">0.0 / 0.0s</span>
+      </div>
+      <div class="timeline-wrap">
+        <div class="timeline" id="timeline" title="Click to jump to a moment in the original clip">
+          <div class="tl-thumbs" id="tl-thumbs"></div>
+          <div class="tl-layer" id="tl-layer"></div>
+          <div class="tl-head" id="tl-head"></div>
+        </div>
+        <div class="timeline-tools">
+          <button class="btn small" id="btn-mark" type="button" title="Mark the steal at the current moment (M)">📍 Mark steal here</button>
+          <span class="time" id="tl-time">0.0s</span>
+          <span class="spacer"></span>
+          <button class="btn small ghost" id="btn-watch" type="button" title="Let the AI watch your clip and find the steal">👀 Find the steal</button>
+        </div>
+      </div>
+      <div class="panel steps-panel">
+        <div class="section-title">
+          Edit <span class="muted" id="out-length"></span>
+          <span class="spacer"></span>
+          <button class="btn tiny ghost" id="btn-undo" type="button" title="Undo">↩️ Undo</button>
+          <button class="btn tiny ghost" id="btn-redo" type="button" title="Redo">↪️ Redo</button>
+        </div>
+        <ul class="steps" id="steps"></ul>
+      </div>
+      <div class="export-row">
+        <button class="btn primary big" id="btn-export" type="button">⬇️ Export video</button>
+        <div class="export-progress" id="export-progress" hidden>
+          <div class="bar"><div id="export-bar"></div></div>
+          <span id="export-text"></span>
+          <button class="btn tiny ghost" id="btn-export-stop" type="button">Stop</button>
+        </div>
+      </div>
+      <div class="exports" id="exports"></div>
+    </div>
+  </template>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

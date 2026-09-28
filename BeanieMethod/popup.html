@@ -23,6 +23,10 @@
       <button id="toggleMusic" class="tab" style="flex: none; width: auto; padding: 4px 10px; font-size: 11px;">🎵 Music: OFF</button>
     </div>
 
+    <button id="openAiEditor" class="ai-editor-btn" type="button" data-testid="open-ai-editor">
+      🎬 AI Editor <span>Turn your steal clips into TikTok edits</span>
+    </button>
+
     <div class="tabs">
       <button id="tabServers" class="tab active" data-testid="tab-servers">Scanner</button>
       <button id="tabBrainrots" class="tab" data-testid="tab-brainrots">Brainrots</button>
@@ -144,6 +148,7 @@
     <source src="audio.mp3" type="audio/mpeg">
   </audio>
 
+  <script src="ai-button.js"></script>
   <script src="libs/toastify.min.js"></script>
   <script src="libs/howler.min.js"></script>
   <script src="popup.js"></script>
